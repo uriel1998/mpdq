@@ -260,7 +260,7 @@ echo -e "\n mpdq -[s|g|f|h]\n\n" \
     "-g genre matching setup\n" \
     "-f both genre matching and song scanning\n" \
     "-h showing this help message\n"
-
+    exit
 }
 
 
