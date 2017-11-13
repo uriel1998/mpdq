@@ -1,0 +1,277 @@
+#!/bin/bash
+
+#Definitions
+ConfigDir=$HOME/.config/mpdq
+ConfigFile=$HOME/.config/mpdq/mpdq.rc
+ConfigGenreFile=$HOME/.config/mpdq/genredefs.rc
+ConfigSongFile=$HOME/.config/mpdq/songdefs.rc
+ConfigLogFile=$HOME/.config/mpdq/playedsongs.log
+SkipGenreMatch=""
+RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+
+if [ -f "$ConfigLogFile" ];then
+    touch "$ConfigLogFile"
+fi
+
+
+#Begin our functions
+
+function floatToint() {
+    printf "%.0f\n" "$@"
+}
+
+function init_config() {
+    
+    if [ -f "$ConfigSongFile" ];then
+        touch "$ConfigSongFile"
+    fi
+    if [ -f "$ConfigGenreFile" ];then
+        touch "$ConfigGenreFile"
+    fi
+}
+
+function read_variables() {
+
+    if [ -f "$ConfigFile" ];then
+        readarray -t line < "$ConfigFile"
+        MPDBASE=${line[0]}
+        MPD_HOST=${line[1]}
+        MPD_PORT=${line[2]}
+        MPD_PASS=${line[3]}
+        PLAYLIST_TRIGGER=${line[4]}
+        BPM_RANGE=${line[5]}  #this is raw number
+        SONGAGE=${line[6]}
+    else
+        exit
+    fi
+    mapfile -t SongFiles < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT listall | awk -v prefix="$MPDBASE/" '{print prefix $0}' )
+    mapfile -t Genre < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre | sed -r 's/\ /_/g' | sed -r 's/\&/ and /g' )
+}
+
+function rotate_songlog {
+
+    tempfile=$(mktemp)
+    currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+    difftime=$(( SONGAGE * 60 * 60 ))
+    hightime=$(( currenttime-difftime ))
+    echo "Eliminating song log entries older than $SONGAGE hours."
+    cat "$ConfigLogFile" | awk -F '@@@' '$1 <= $hightime' > "$tempfile"
+    mv -f "$tempfile" "$ConfigLogFile"
+}
+
+function zenity_list_genres(){
+
+    OIFS=$IFS;
+    IFS=$'\n';
+    for ((i=0; i<${#Genre[@]}; ++i));
+    do
+        IFS=$'\t'
+        cont=(${Genre[$i]})
+        for ((j=0; j<${#cont[@]}; ++j));
+        do  
+            # I do not know why putting $j in front makes a difference, but it does.
+            echo -n -e "$j ${cont[$j]}"  
+            echo -n -e "\t"
+        done
+        IFS=$OIFS;
+    done
+    IFS=$OIFS;
+}
+
+function setup_genre() {
+
+    for ((i=0; i<${#Genre[@]}; ++i));
+    do
+        if grep -q -e "${Genre[i]};" "$ConfigGenreFile"; then
+            echo "Genre already parsed"
+        else    
+            bob=$(zenity_list_genres)
+            ans[$i]=$(zenity  --height=400 --list  --text "What genres go with ${Genre[i]}?" --checklist  --column "Pick" --column "options" $bob --separator="@")
+            GenreMatch[$i]=$(echo "${Genre[i]};${ans[$i]}")
+            echo "${GenreMatch[$i]}"
+            #TODO eventually I'd like to put fine tuning in here - say, a percentage for each genre.
+            #TODO And also editing of existing files
+            printf "%s\n" "${GenreMatch[i]}" >> "$ConfigGenreFile"            
+        fi
+    done
+}
+
+function setup_songinfo() {
+
+    for ((i=0; i<${#SongFiles[@]}; ++i));
+    do
+        if grep -q "${SongFiles[i]}" "$ConfigSongFile"; then
+            echo "File already parsed"
+        else
+            re='^[0-9]+$'
+            #ffmpeg solution - faster by a quarter second a file
+            #in my 13,000 mp3 collection, that's 3250 seconds!
+            echo -n "@"
+            songdata=$(ffprobe "${SongFiles[i]}" 2>&1)
+            SongBpm[$i]=$(echo "$songdata" | grep TBPM | awk -F ': ' '{ print $2 }')
+            SongGenre[$i]=$(echo "$songdata" | grep genre | awk -F ': ' '{ print $2 }'| sed -r 's/\ /_/g' | sed -r 's/\&/ and /g' )
+            if ! [[ $existingbpm =~ $re ]] && [[ "$existingbpm" != "" ]]; then
+                echo "Existing BPM jacked up!!" >&2
+            fi
+            echo "${SongFiles[i]}@@@${SongBpm[i]}@@@${SongGenre[i]}" >> "$ConfigSongFile"
+        fi
+    done
+}
+
+function get_songinfo() {
+    
+    mpd_state1=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --format "a@%artist%\nb@%album%\nc@%title%\nd@%file%")
+    teststring=$(echo "$mpd_state1" | grep "a@")
+    #to avoid crash if empty playlist
+    if [ -z "$teststring" ];then
+        TempSongAdd=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT listall | awk 'BEGIN { srand() } int(rand() * NR) == 0 { x = $0 } END { print x }' )
+        mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT add "$TempSongAdd"
+        mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT play
+        mpd_state1=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --format "a@%artist%\nb@%album%\nc@%title%\nd@%file%")
+    fi
+    ARTIST=$(echo "$mpd_state1" | grep "a@" | awk -F "a@" '{print $2}')
+    ALBUM=$(echo "$mpd_state1" | grep "b@" | awk -F "b@" '{print $2}')
+    TITLE=$(echo "$mpd_state1" | grep "c@" | awk -F "c@" '{print $2}')
+    SONGFILE=$(echo "$mpd_state1" | grep "d@" | awk -F "d@" '{print $2}')
+    RELSONGFILE=$(echo "$mpd_state1" | grep "d@" | awk -F "d@" '{print $2}')
+    SONGFILE="$MPDBASE/$RELSONGFILE"
+    SONGDIR=$(dirname "$SONGFILE")
+    
+    BeenParsed=$(grep "$SONGFILE" "$ConfigSongFile")
+    if [ -z "$BeenParsed" ];then
+        songdata=$(ffprobe "$SONGFILE" 2>&1)
+        SongBpm=$(echo "$songdata" | grep TBPM | awk -F ': ' '{ print $2 }')
+        SongGenre=$(echo "$songdata" | grep genre | awk -F ': ' '{ print $2 }'| sed -r 's/\ /_/g' | sed -r 's/\&/ and /g' )
+        if ! [[ $existingbpm =~ $re ]] && [[ "$existingbpm" != "" ]]; then
+            echo "Existing BPM jacked up!!" >&2
+        fi
+        echo "$SONGFILE@@@$SongBpm@@@$SongGenre" >> "$ConfigSongFile"
+        CurrentSongBpm="$SongBpm"
+        CurrentSongGenre="$SongGenre"
+    else
+        CurrentSongBpm=$(echo "$BeenParsed" | awk -F "@@@" '{print $2}')
+        CurrentSongGenre=$(echo "$BeenParsed" | awk -F "@@@" '{print $3}'| sed -r 's/\ /_/g'  )
+    fi
+}
+
+function choose_next_song {
+
+        #want to base this off currently playing song
+        get_songinfo
+        beenparsed=$(grep "$CurrentSongGenre;" "$ConfigGenreFile")
+        if [ -z "$beenparsed" ];then
+            genrematch="$CurrentSongGenre"
+        else
+            echo "Genre has a match in config file!"
+            temp=$(echo "$beenparsed" | awk -F ";" '{print $2}' | sed 's/@/ /g')
+            genrematch=$(printf '%s\n' $temp | shuf -n1)
+        fi
+        echo "Looking for a song in $genrematch"
+        CurrentSongBpm=$(floatToint $CurrentSongBpm)
+    
+        lowbpm=$((CurrentSongBpm-BPM_RANGE))
+        highbpm=$((CurrentSongBpm+BPM_RANGE))
+        if [ -z "$SkipGenreMatch" ];then
+            # match genre | match bpm range | randomly choose from remainder
+            TSongFileToAdd=$(grep -e "$genrematch" "$ConfigSongFile"| awk -F '@@@' ''$lowbpm' <= $2 && $2 <= '$highbpm' {print $1}' | awk 'BEGIN { srand() } int(rand() * NR) == 0 { x = $0 } END { print x }' )
+        else
+            # Too few matches/too many bad matches, now choose randomly...but within BPM range    
+            # match bpm range | randomly choose from remainder
+            TSongFileToAdd=$(cat "$ConfigSongFile" | awk -F '@@@' ''$lowbpm' <= $2 && $2 <= '$highbpm' {print $1}' | awk 'BEGIN { srand() } int(rand() * NR) == 0 { x = $0 } END { print x }' )        
+        fi
+        if cat "$ConfigLogFile" | grep -q -e "$TSongFileToAdd"; then
+            echo "Song recently used; kicking back"
+            SongFileToAdd=""
+        else
+            SongFileToAdd=${TSongFileToAdd#$MPDBASE/}
+            #mark that we used it.
+            nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+            echo "$nowtime@@@$TSongFileToAdd" >> "$ConfigLogFile"
+        fi
+}
+
+function need_next_song {
+
+    OriginalBPM_RANGE="$BPM_RANGE"
+    counter=0
+    while [ -z "$SongFileToAdd" ];do
+        #this increases the acceptable BPM range when there are lots of kickbacks
+        echo "Searching for song within BPM range of $BPM_RANGE"
+        choose_next_song
+        BPM_RANGE=$((BPM_RANGE+counter))
+        counter=$((counter+1))
+        #If a match can't be found with a wide BPM range we will try
+        #to get a good BPM match in all genres
+        if [ "$counter" == "10"  ] && [ -z "$SkipGenreMatch"];then
+            counter=0
+            SkipGenreMatch="TRUE"
+        fi
+    done  
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT add "$SongFileToAdd"
+    #reset match tests
+    BPM_RANGE="$OriginalBPM_RANGE"
+    SongFileToAdd=""
+    SkipGenreMatch=""
+}
+
+function main {
+
+    rotate_songlog
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume on
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet play
+    (echo qman-startup; mpc idleloop) | while read event
+    do
+        if [ "$event" = "mixer" ]
+        then
+            continue
+        fi
+        if [ "$event" = "update" ]
+        then
+            continue
+        fi
+        playlist_length=$(mpc playlist | wc -l)
+        if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
+            need_next_song
+        fi  
+        ctime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+        Timertime=$(( ctime-3600 ))
+        # Has it been an hour?
+        if [[ $RunningLogRotateTime -lt $TimerTime ]];then
+            rotate_songlog
+            RunningLogRotateTime=$ctime
+        fi
+    done
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume off
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet pause-if-playing
+}
+
+function show_help {
+
+echo -e "\n mpdq -[s|g|f|h]\n\n" \
+    "Once setup, usage does not require any command line switches\n" \
+    "See the README for how to set up the rc files\n\n" \
+    "-s song scanning and setup\n" \
+    "-g genre matching setup\n" \
+    "-f both genre matching and song scanning\n" \
+    "-h showing this help message\n"
+
+}
+
+
+
+    read_variables
+    init_config
+
+
+while getopts "sgfh" opt; do
+    case $opt in
+        s)  setup_songinfo;;
+        g)  setup_genre;;
+        f)  setup_genre
+            setup_songinfo
+            ;;
+        h)  show_help;;            
+    esac
+done
+
+main
