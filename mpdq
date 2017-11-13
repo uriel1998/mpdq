@@ -1,6 +1,9 @@
 #!/bin/bash
 
-#Definitions
+########################################################################
+# Definitions
+########################################################################
+
 ConfigDir=$HOME/.config/mpdq
 ConfigFile=$HOME/.config/mpdq/mpdq.rc
 ConfigGenreFile=$HOME/.config/mpdq/genredefs.rc
@@ -9,19 +12,22 @@ ConfigLogFile=$HOME/.config/mpdq/playedsongs.log
 SkipGenreMatch=""
 RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
 
-if [ -f "$ConfigLogFile" ];then
-    touch "$ConfigLogFile"
-fi
+########################################################################
+# Functions
+########################################################################
 
-
-#Begin our functions
 
 function floatToint() {
+
+    # Required due to the way ffmpeg returns BPM (with decimals)
     printf "%.0f\n" "$@"
 }
 
 function init_config() {
-    
+
+    if [ -f "$ConfigLogFile" ];then
+        touch "$ConfigLogFile"
+    fi    
     if [ -f "$ConfigSongFile" ];then
         touch "$ConfigSongFile"
     fi
@@ -258,10 +264,12 @@ echo -e "\n mpdq -[s|g|f|h]\n\n" \
 }
 
 
+########################################################################
+# Wherein we call setup stuff and parse arguments
+########################################################################
 
-    read_variables
-    init_config
-
+read_variables
+init_config
 
 while getopts "sgfh" opt; do
     case $opt in
