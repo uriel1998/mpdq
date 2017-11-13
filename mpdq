@@ -224,7 +224,7 @@ function main {
     rotate_songlog
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume on
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet play
-    (echo qman-startup; mpc idleloop) | while read event
+    (echo qman-startup; mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT idleloop) | while read event
     do
         if [ "$event" = "mixer" ]
         then
@@ -234,7 +234,7 @@ function main {
         then
             continue
         fi
-        playlist_length=$(mpc playlist | wc -l)
+        playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
         if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
             need_next_song
         fi  
