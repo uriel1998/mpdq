@@ -88,7 +88,7 @@ function setup_genre() {
 
     for ((i=0; i<${#Genre[@]}; ++i));
     do
-        if grep -q -e "${Genre[i]};" "$ConfigGenreFile"; then
+        if grep -qF "${Genre[i]};" "$ConfigGenreFile"; then
             echo "Genre already parsed"
         else    
             bob=$(zenity_list_genres)
@@ -106,13 +106,13 @@ function setup_songinfo() {
 
     for ((i=0; i<${#SongFiles[@]}; ++i));
     do
-        if grep -q "${SongFiles[i]}" "$ConfigSongFile"; then
-            echo "File already parsed"
+        if grep -qF "${SongFiles[i]}" "$ConfigSongFile"; then
+            echo -n "#"
         else
-            re='^[0-9]+$'
+            #re='^[0-9]+$'
             #ffmpeg solution - faster by a quarter second a file
             #in my 13,000 mp3 collection, that's 3250 seconds!
-            echo -n "@"
+            echo -n "@${SongFiles[i]}"
             songdata=$(ffprobe "${SongFiles[i]}" 2>&1)
             SongBpm[$i]=$(echo "$songdata" | grep TBPM | awk -F ': ' '{ print $2 }')
             SongGenre[$i]=$(echo "$songdata" | grep genre | awk -F ': ' '{ print $2 }'| sed -r 's/\ /_/g' | sed -r 's/\&/ and /g' )
@@ -143,7 +143,7 @@ function get_songinfo() {
     SONGFILE="$MPDBASE/$RELSONGFILE"
     SONGDIR=$(dirname "$SONGFILE")
     
-    BeenParsed=$(grep "$SONGFILE" "$ConfigSongFile")
+    BeenParsed=$(grep -F "$SONGFILE" "$ConfigSongFile")
     if [ -z "$BeenParsed" ];then
         songdata=$(ffprobe "$SONGFILE" 2>&1)
         SongBpm=$(echo "$songdata" | grep TBPM | awk -F ': ' '{ print $2 }')
@@ -185,7 +185,7 @@ function choose_next_song {
             # match bpm range | randomly choose from remainder
             TSongFileToAdd=$(cat "$ConfigSongFile" | awk -F '@@@' ''$lowbpm' <= $2 && $2 <= '$highbpm' {print $1}' | awk 'BEGIN { srand() } int(rand() * NR) == 0 { x = $0 } END { print x }' )        
         fi
-        if cat "$ConfigLogFile" | grep -q -e "$TSongFileToAdd"; then
+        if cat "$ConfigLogFile" | grep -qF "$TSongFileToAdd"; then
             echo "Song recently used; kicking back"
             SongFileToAdd=""
         else
@@ -260,7 +260,6 @@ echo -e "\n mpdq -[s|g|f|h]\n\n" \
     "-g genre matching setup\n" \
     "-f both genre matching and song scanning\n" \
     "-h showing this help message\n"
-    exit
 }
 
 
@@ -273,12 +272,23 @@ init_config
 
 while getopts "sgfh" opt; do
     case $opt in
-        s)  setup_songinfo;;
-        g)  setup_genre;;
-        f)  setup_genre
+        s)  
             setup_songinfo
+            exit
             ;;
-        h)  show_help;;            
+        g)  
+            setup_genre
+            exit
+            ;;
+        f)  
+            setup_genre
+            setup_songinfo
+            exit
+            ;;
+        h)  
+            show_help
+            exit
+            ;;            
     esac
 done
 
