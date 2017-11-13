@@ -178,7 +178,7 @@ function choose_next_song {
         highbpm=$((CurrentSongBpm+BPM_RANGE))
         if [ -z "$SkipGenreMatch" ];then
             # match genre | match bpm range | randomly choose from remainder
-            TSongFileToAdd=$(grep -e "$genrematch" "$ConfigSongFile"| awk -F '@@@' ''$lowbpm' <= $2 && $2 <= '$highbpm' {print $1}' | awk 'BEGIN { srand() } int(rand() * NR) == 0 { x = $0 } END { print x }' )
+            TSongFileToAdd=$(grep -F "$genrematch" "$ConfigSongFile"| awk -F '@@@' ''$lowbpm' <= $2 && $2 <= '$highbpm' {print $1}' | awk 'BEGIN { srand() } int(rand() * NR) == 0 { x = $0 } END { print x }' )
         else
             # Too few matches/too many bad matches, now choose randomly...but within BPM range    
             # match bpm range | randomly choose from remainder
