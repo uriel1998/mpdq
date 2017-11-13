@@ -75,9 +75,7 @@ function zenity_list_genres(){
         cont=(${Genre[$i]})
         for ((j=0; j<${#cont[@]}; ++j));
         do  
-            # I do not know why putting $j in front makes a difference, but it does.
-            echo -n -e "$j ${cont[$j]}"  
-            echo -n -e "\t"
+            echo -n -e "FALSE ${cont[$j]} "  
         done
         IFS=$OIFS;
     done
@@ -89,14 +87,15 @@ function setup_genre() {
     for ((i=0; i<${#Genre[@]}; ++i));
     do
         if grep -qF "${Genre[i]};" "$ConfigGenreFile"; then
-            echo "Genre already parsed"
+            echo "${Genre[i]} already parsed"
         else    
-            bob=$(zenity_list_genres)
+            bob1=$(zenity_list_genres)
+            bob2="${Genre[i]}"
+            bob=$(echo "$bob1" | awk -v boo="FALSE $bob2" -v boo2="TRUE $bob2" '{gsub(boo,boo2);print}')
             ans[$i]=$(zenity  --height=400 --list  --text "What genres go with ${Genre[i]}?" --checklist  --column "Pick" --column "options" $bob --separator="@")
             GenreMatch[$i]=$(echo "${Genre[i]};${ans[$i]}")
             echo "${GenreMatch[$i]}"
             #TODO eventually I'd like to put fine tuning in here - say, a percentage for each genre.
-            #TODO And also editing of existing files
             printf "%s\n" "${GenreMatch[i]}" >> "$ConfigGenreFile"            
         fi
     done
