@@ -88,3 +88,9 @@ cannot find a match, it will try to find a song within the original BPM
 range in *any* genre.
 
 Rinse and repeat.
+
+# TODO
+
+* Progress indicator for song scanning
+* Way to (easily) indicate that some genres are "better" matches than others
+* Ways to blacklist some songs or genres
