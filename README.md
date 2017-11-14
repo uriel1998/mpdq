@@ -65,6 +65,7 @@ rescan files it has information for, so while the first scan will take a
 Run `mpdq` without any arguments.  It will loop with MPD's event update 
 cycle.
 
+
 ### Startup Things The Program Does
 * On startup, it deletes old entries in the logfile of songs that it has 
 played (located at $HOME/.config/mpdq/playedsongs.log). It does this task 
@@ -76,7 +77,7 @@ song and starts playing it.
 program.
 
 ### Operation
-The program first looks at the *currently* playing song. If there are 
+The program first looks at the *initial* playing song. If there are 
 matching genres already configured, it picks one of those genres 
 randomly. From that set, it narrows it to songs within the defined BPM 
 range. And then it checks to make sure it's not been played within the 
@@ -88,6 +89,12 @@ cannot find a match, it will try to find a song within the original BPM
 range in *any* genre.
 
 Rinse and repeat.
+
+There is one runtime switch: -j . It means the matches are to the *currently* 
+playing song. This can provide more diversity, but also means that the 
+genre can jump or drift. For example, if *Pop* matches to *Dance* which 
+matches to *Electronic* which matches to *Darkwave* which matches to 
+*Industrial*... you're waaaaay away from Cyndi Lauper awfully fast.
 
 # TODO
 

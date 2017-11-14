@@ -11,6 +11,8 @@ ConfigSongFile=$HOME/.config/mpdq/songdefs.rc
 ConfigLogFile=$HOME/.config/mpdq/playedsongs.log
 SkipGenreMatch=""
 RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+InitialGenre=""
+Drift=""
 
 ########################################################################
 # Functions
@@ -163,7 +165,12 @@ function choose_next_song {
 
         #want to base this off currently playing song
         get_songinfo
-        beenparsed=$(grep "$CurrentSongGenre;" "$ConfigGenreFile")
+        if [ -z "$DRIFT" ];then
+            beenparsed=$(grep "^$InitialGenre;" "$ConfigGenreFile")
+        else
+            beenparsed=$(grep "^$CurrentSongGenre;" "$ConfigGenreFile")
+        fi
+        echo "$InitialGenre @@ $beenparsed"
         if [ -z "$beenparsed" ];then
             genrematch="$CurrentSongGenre"
         else
@@ -224,6 +231,8 @@ function main {
     rotate_songlog
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume on
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet play
+    get_songinfo
+    InitialGenre="$CurrentSongGenre"
     (echo qman-startup; mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT idleloop) | while read event
     do
         if [ "$event" = "mixer" ]
@@ -254,6 +263,7 @@ function show_help {
 
 echo -e "\n mpdq -[s|g|f|h]\n\n" \
     "Once setup, usage does not require any command line switches\n" \
+    "-j OPTIONAL: jump among genres (matches may \"drift\")\n" \
     "See the README for how to set up the rc files\n\n" \
     "-s song scanning and setup\n" \
     "-g genre matching setup\n" \
@@ -269,7 +279,7 @@ echo -e "\n mpdq -[s|g|f|h]\n\n" \
 read_variables
 init_config
 
-while getopts "sgfh" opt; do
+while getopts "sgfhj" opt; do
     case $opt in
         s)  
             setup_songinfo
@@ -287,7 +297,10 @@ while getopts "sgfh" opt; do
         h)  
             show_help
             exit
-            ;;            
+            ;;   
+        j)
+            DRIFT="TRUE"
+            ;;
     esac
 done
 
