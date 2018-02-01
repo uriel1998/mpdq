@@ -1,0 +1,81 @@
+#!/bin/bash
+
+########################################################################
+# Definitions
+########################################################################
+
+ConfigDir=$HOME/.config/mpdq
+ConfigFile=$HOME/.config/mpdq/mpdq.rc
+ConfigGenreFile=$HOME/.config/mpdq/genredefs.rc
+ConfigSongFile=$HOME/.config/mpdq/songdefs.rc
+
+function read_variables() {
+
+    if [ -f "$ConfigFile" ];then
+        readarray -t line < "$ConfigFile"
+        MPDBASE=${line[0]}
+        MPD_HOST=${line[1]}
+        MPD_PORT=${line[2]}
+        MPD_PASS=${line[3]}
+        PLAYLIST_TRIGGER=${line[4]}
+        BPM_RANGE=${line[5]}  #this is raw number
+        SONGAGE=${line[6]}
+    else
+        exit
+    fi
+    mapfile -t SongFiles < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT listall | awk -v prefix="$MPDBASE/" '{print prefix $0}' )
+    mapfile -t Genre < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre | sed -r 's/\ /_/g' | sed -r 's/\&/ and /g' )
+}  
+
+function zenity_list_genres(){
+
+    OIFS=$IFS;
+    IFS=$'\n';
+    for ((i=0; i<${#Genre[@]}; ++i));
+    do
+        IFS=$'\t'
+        cont=(${Genre[$i]})
+        for ((j=0; j<${#cont[@]}; ++j));
+        do  
+            echo -n -e "FALSE ${cont[$j]} "  
+        done
+        IFS=$OIFS;
+    done
+    IFS=$OIFS;
+}
+
+function zenity_pick_stuff(){
+            default=$(date +%Y%j%H%m%s)
+            filename=$(zenity --file-selection --filename="$HOME/.mpd/playlists/$default.m3u" --save)
+            bob1=$(zenity_list_genres)
+            bob=$(echo "$bob1" | awk -v boo="FALSE $bob2" -v boo2="FALSE $bob2" '{gsub(boo,boo2);print}')
+            bob2=$(zenity --height=400 --list  --text "What genres for our playlist?" --checklist  --column "Pick" --column "options" $bob --separator=" ")
+            read -a genrematch <<<"$bob2"
+}
+
+
+function zenity_pick_bpm() {
+    CurrentSongBpm=$(zenity --scale --text "What BPM should our playlist be centered on?" --min-value=2 --max-value=200 --value=130 --step 2)
+    BPM_RANGE=$(zenity --scale --text "What percentage range of BPMs should be allowed?" --min-value=0 --max-value=50 --value=5 --step 5)
+    lowbpm=$((CurrentSongBpm-BPM_RANGE))
+    highbpm=$((CurrentSongBpm+BPM_RANGE))
+}
+
+
+
+function create_playlist() {
+        if [ -z $filename ]; then
+            echo "No filename set to save to!" 
+            exit
+        else
+            for ((i=0; i<${#genrematch[@]}; ++i));
+            do
+                grep -F "${genrematch[i]}" "$ConfigSongFile"| awk -F '@@@' ''$lowbpm' <= $2 && $2 <= '$highbpm' {print $1}' > "$filename"
+            done
+        fi
+}
+
+read_variables
+zenity_pick_stuff
+zenity_pick_bpm
+create_playlist
