@@ -101,3 +101,20 @@ matches to *Electronic* which matches to *Darkwave* which matches to
 * Progress indicator for song scanning
 * Way to (easily) indicate that some genres are "better" matches than others
 * Ways to blacklist some songs or genres
+
+
+Playlistmaker
+========
+
+This is created so that you can create static playlists based on "smart" 
+criteria like combinations of *genre* and *bpm*.  (See `recentsongs.sh` for
+a way to create a playlist of songs recently added to your system.)
+
+This utility *only* works in combination with the mpdq database, so you
+have to run `mpdq -s` at the very least so that it can scan your music files.
+
+It's pretty self-explanatory - it creates playlists with a default of the 
+current date and time in $HOME/.mpd/playlists, though you can choose the 
+location.  Then you can select as many genres as you want, the BPM you 
+want as the centerpoint, and the range you want (in percentage).  It'll 
+spit out a playlist you can then easily play in MPD.

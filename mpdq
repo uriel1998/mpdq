@@ -301,6 +301,9 @@ while getopts "sgfhj" opt; do
         j)
             DRIFT="TRUE"
             ;;
+		m)	#mood (genre) set
+			#user defined moods - with bpms and genres
+			echo "-m was triggered, Parameter: $OPTARG";;            
     esac
 done
 
