@@ -68,10 +68,17 @@ function create_playlist() {
             echo "No filename set to save to!" 
             exit
         else
+            FILE=$(mktemp)
+            echo "$FILE"
+            echo "" > "$filename" 
             for ((i=0; i<${#genrematch[@]}; ++i));
             do
-                grep -F "${genrematch[i]}" "$ConfigSongFile"| awk -F '@@@' ''$lowbpm' <= $2 && $2 <= '$highbpm' {print $1}' > "$filename"
+                grep -F "${genrematch[i]}" "$ConfigSongFile"| awk -F '@@@' ''$lowbpm' <= $2 && $2 <= '$highbpm' {print $1}' >> $FILE
             done
+            while read p; do
+                SongFileToAdd=${p#$MPDBASE/}
+                echo "$SongFileToAdd" >> "$filename"
+            done <$FILE
         fi
 }
 
