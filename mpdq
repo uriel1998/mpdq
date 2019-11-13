@@ -13,6 +13,7 @@ SkipGenreMatch=""
 RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
 InitialGenre=""
 Drift=""
+BPMOnly=""
 
 ########################################################################
 # Functions
@@ -170,15 +171,17 @@ function choose_next_song {
         else
             beenparsed=$(grep "^$CurrentSongGenre;" "$ConfigGenreFile")
         fi
-        echo "$InitialGenre @@ $beenparsed"
-        if [ -z "$beenparsed" ];then
-            genrematch="$CurrentSongGenre"
-        else
-            echo "Genre has a match in config file!"
-            temp=$(echo "$beenparsed" | awk -F ";" '{print $2}' | sed 's/@/ /g')
-            genrematch=$(printf '%s\n' $temp | shuf -n1)
+        if [ -z "$SkipGenreMatch" ];then
+            echo "$InitialGenre @@ $beenparsed"
+            if [ -z "$beenparsed" ];then
+                genrematch="$CurrentSongGenre"
+            else
+                echo "Genre has a match in config file!"
+                temp=$(echo "$beenparsed" | awk -F ";" '{print $2}' | sed 's/@/ /g')
+                genrematch=$(printf '%s\n' $temp | shuf -n1)
+            fi
+            echo "Looking for a song in $genrematch"
         fi
-        echo "Looking for a song in $genrematch"
         CurrentSongBpm=$(floatToint $CurrentSongBpm)
     
         lowbpm=$((CurrentSongBpm-BPM_RANGE))
@@ -223,7 +226,9 @@ function need_next_song {
     #reset match tests
     BPM_RANGE="$OriginalBPM_RANGE"
     SongFileToAdd=""
-    SkipGenreMatch=""
+    if [ -z "$BPMOnly" ];then
+        SkipGenreMatch=""
+    fi
 }
 
 function main {
@@ -279,8 +284,12 @@ echo -e "\n mpdq -[s|g|f|h]\n\n" \
 read_variables
 init_config
 
-while getopts "sgfhj" opt; do
+while getopts "bsgfhj" opt; do
     case $opt in
+        b)  
+            BPMOnly="True"
+            SkipGenreMatch="TRUE"
+            ;;
         s)  
             setup_songinfo
             exit
