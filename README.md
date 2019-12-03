@@ -67,12 +67,15 @@ cycle.
 
 ### Switches  
 
-* -b switch to just have mpdq match via BPM, not genre.  
+* -b switch to just have `mpdq` match via BPM, not genre.  
 * -j Matches are to the *currently* playing song. This can provide more 
 diversity, but also means that the genre can jump or drift. 
 For example, if *Pop* matches to *Dance* which matches to *Electronic* 
 which matches to *Darkwave* which matches to *Industrial*... you're waaaaay 
 away from Cyndi Lauper awfully fast.  
+* -k Kills a running `mpdq` process.  The idea is that you can run `mpdq` in the 
+background and then invoke it again to kill it.
+
 
 ### Startup Things The Program Does  
 
@@ -114,7 +117,7 @@ This is created so that you can create static playlists based on "smart"
 criteria like combinations of *genre* and *bpm*.  (See `recentsongs.sh` for
 a way to create a playlist of songs recently added to your system.)
 
-This utility *only* works in combination with the mpdq database, so you
+This utility *only* works in combination with the `mpdq` database, so you
 have to run `mpdq -s` at the very least so that it can scan your music files.
 
 It's pretty self-explanatory - it creates playlists with a default of the 

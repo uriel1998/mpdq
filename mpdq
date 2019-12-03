@@ -264,6 +264,21 @@ function main {
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet pause-if-playing
 }
 
+pre_exit(){
+    VPID=$(cat /tmp/mpdq.pid)
+    kill -9 "$VPID" &> /dev/null
+    rm /tmp/mpdq.pid
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume off
+    
+}
+
+killing() {
+    
+    pre_exit
+
+exit
+}
+
 function show_help {
 
 echo -e "\n mpdq -[s|g|f|h]\n\n" \
@@ -273,18 +288,17 @@ echo -e "\n mpdq -[s|g|f|h]\n\n" \
     "-s song scanning and setup\n" \
     "-g genre matching setup\n" \
     "-f both genre matching and song scanning\n" \
+    "-b BPM matching ONLY \n" \
+    "-k Kill existing mpdq process \n" \
     "-h showing this help message\n"
 }
 
-
 ########################################################################
-# Wherein we call setup stuff and parse arguments
+# Wherein we parse arguments
 ########################################################################
 
-read_variables
-init_config
 
-while getopts "bsgfhj" opt; do
+while getopts "bsgfhjk" opt; do
     case $opt in
         b)  
             BPMOnly="True"
@@ -310,10 +324,27 @@ while getopts "bsgfhj" opt; do
         j)
             DRIFT="TRUE"
             ;;
+        k)  init_config
+            read_variables 
+            killing
+            shift ;;    
 		m)	#mood (genre) set
 			#user defined moods - with bpms and genres
 			echo "-m was triggered, Parameter: $OPTARG";;            
     esac
 done
 
+
+#Will not be echoed if killing process, as killing exits the program first
+echo "$$" > /tmp/mpdq.pid
+
+# Disable CTRL-Z because if we allowed this key press,
+# then the script would exit but, sxiv would still be
+# running
+trap "" SIGTSTP
+
+trap pre_exit EXIT
+
+init_config
+read_variables
 main
