@@ -14,7 +14,7 @@ RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
 InitialGenre=""
 Drift=""
 BPMOnly=""
-
+SCRIPT=$0
 ########################################################################
 # Functions
 ########################################################################
@@ -240,6 +240,10 @@ function main {
     InitialGenre="$CurrentSongGenre"
     (echo qman-startup; mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT idleloop) | while read event
     do
+        # Messy, but closes all subprocesses out
+        if [ ! -f /tmp/mpdq.pid ];then
+            killing
+        fi
         if [ "$event" = "mixer" ]
         then
             continue
@@ -264,19 +268,16 @@ function main {
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet pause-if-playing
 }
 
-pre_exit(){
-    VPID=$(cat /tmp/mpdq.pid)
-    kill -9 "$VPID" &> /dev/null
+killing(){
+    
+    while read VPID; do
+        if [ $VPID != "$$" ];then
+            kill -9 "$VPID" &> /dev/null
+        fi
+    done < /tmp/mpdq.pid
     rm /tmp/mpdq.pid
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume off
-    
-}
-
-killing() {
-    
-    pre_exit
-
-exit
+    exit
 }
 
 function show_help {
@@ -324,10 +325,12 @@ while getopts "bsgfhjk" opt; do
         j)
             DRIFT="TRUE"
             ;;
-        k)  init_config
+        k)  
+            
+            ps aux | grep $0 | grep --color=auto -v -e grep | awk '{print $2}' >> /tmp/mpdq.pid
             read_variables 
             killing
-            shift ;;    
+            ;;    
 		m)	#mood (genre) set
 			#user defined moods - with bpms and genres
 			echo "-m was triggered, Parameter: $OPTARG";;            
@@ -336,14 +339,10 @@ done
 
 
 #Will not be echoed if killing process, as killing exits the program first
-echo "$$" > /tmp/mpdq.pid
-
-# Disable CTRL-Z because if we allowed this key press,
-# then the script would exit but, sxiv would still be
-# running
-trap "" SIGTSTP
-
-trap pre_exit EXIT
+echo "$$" >> /tmp/mpdq.pid
+    
+    
+trap killing EXIT
 
 init_config
 read_variables
