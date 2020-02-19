@@ -92,6 +92,7 @@ function setup_genre() {
         if grep -q "^${Genre[i]};" "$ConfigGenreFile"; then #$HOME/.config/mpdq/genredefs.rc
             echo "${Genre[i]} already parsed"
         else    
+            
             bob1=$(zenity_list_genres)
             bob2="${Genre[i]}"
             bob=$(echo "$bob1" | awk -v boo="FALSE $bob2" -v boo2="TRUE $bob2" '{gsub(boo,boo2);print}')
@@ -232,7 +233,6 @@ function need_next_song {
 }
 
 function main {
-
     rotate_songlog
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume on
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet play
@@ -297,6 +297,8 @@ echo -e "\n mpdq -[s|g|f|h]\n\n" \
 ########################################################################
 # Wherein we parse arguments
 ########################################################################
+init_config
+read_variables
 
 
 while getopts "bsgfhjk" opt; do
@@ -333,17 +335,17 @@ while getopts "bsgfhjk" opt; do
             ;;    
 		m)	#mood (genre) set
 			#user defined moods - with bpms and genres
-			echo "-m was triggered, Parameter: $OPTARG";;            
+			echo "-m was triggered, Parameter: $OPTARG";;    
+        *)  #Will not be echoed if killing process, as killing exits the program first
+            echo "$$" >> /tmp/mpdq.pid
+                
+                
+            trap killing EXIT
+
+            main
+            ;;
+        
     esac
 done
 
 
-#Will not be echoed if killing process, as killing exits the program first
-echo "$$" >> /tmp/mpdq.pid
-    
-    
-trap killing EXIT
-
-init_config
-read_variables
-main
