@@ -328,7 +328,6 @@ while getopts "bsgfhjk" opt; do
             DRIFT="TRUE"
             ;;
         k)  
-            
             ps aux | grep $0 | grep --color=auto -v -e grep | awk '{print $2}' >> /tmp/mpdq.pid
             read_variables 
             killing
@@ -336,7 +335,12 @@ while getopts "bsgfhjk" opt; do
 		m)	#mood (genre) set
 			#user defined moods - with bpms and genres
 			echo "-m was triggered, Parameter: $OPTARG";;    
-        *)  #Will not be echoed if killing process, as killing exits the program first
+
+        
+    esac
+done
+  #Will not be echoed if killing process, as killing exits the program first
+
             echo "$$" >> /tmp/mpdq.pid
                 
                 
@@ -344,8 +348,3 @@ while getopts "bsgfhjk" opt; do
 
             main
             ;;
-        
-    esac
-done
-
-
