@@ -1,0 +1,221 @@
+#!/bin/bash
+
+########################################################################
+# Definitions
+########################################################################
+
+ConfigDir=$HOME/.config/mpdq
+ConfigFile=$HOME/.config/mpdq/mpdq.rc
+ConfigLogFile=$HOME/.config/mpdq/playedsongs.log
+RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+SCRIPT=$0
+InstructionFile=""
+DefaultPriority=1
+
+########################################################################
+# Functions
+########################################################################
+
+
+function init_config() {
+
+    if [ -f "$ConfigLogFile" ];then
+        touch "$ConfigLogFile"
+    fi    
+}
+
+function read_variables() {
+
+#TODO - make this look like a real ini or config file
+
+    if [ -f "$ConfigFile" ];then
+        readarray -t line < "$ConfigFile"
+        MPDBASE=${line[0]}
+        MPD_HOST=${line[1]}
+        MPD_PORT=${line[2]}
+        MPD_PASS=${line[3]}
+        SONGAGE=${line[6]}
+    else
+        exit
+    fi
+#    mapfile -t SongFiles < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT listall | awk -v prefix="$MPDBASE/" '{print prefix $0}' )
+    mapfile -t Genre < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre | sed -r 's/\ /_/g' | sed -r 's/\&/ and /g' )
+}
+
+function rotate_songlog {
+
+    tempfile=$(mktemp)
+    currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+    difftime=$(( SONGAGE * 60 * 60 ))
+    hightime=$(( currenttime-difftime ))
+    echo "Eliminating song log entries older than $SONGAGE hours."
+    cat "$ConfigLogFile" | awk -F '@@@' '$1 <= $hightime' > "$tempfile"
+    mv -f "$tempfile" "$ConfigLogFile"
+}
+
+
+
+
+function read_instructions {
+
+#read in - one line might be (and is overridden by cli switch)
+#default=VALUE
+#then 0-infinity of
+#genrename=VALUE 
+#ModGenre(array)ModValue(array) and use position as index between the two
+    
+}
+
+
+function determine_genre_weights {
+    
+#This is not light, but it's only done once a run.
+#loop through genre, if not in array ModGenre, then apply DefaultWeight
+    for ((i = 0; i < ${#Genre[@]}; i++));do
+        for ((i2 = 0; i2 < ${#ModGenre[@]}; i2++));do
+            if [[ "${Genre[$i]}" == "${ModGenre[$i2]}" ]];then   #Think I remembered the syntax rightly.
+                GenreWeight="${ModValue[$i2]}"
+            else
+                GenreWeight="$DefaultWeight"
+            fi
+        done
+    done
+
+#populating the "weighted" array   
+
+    for ((i = 0; i < ${#Genre[@]}; i++));do
+        for ((i2 = 0; i2 < ${#GenreWeight[$i]}; i2++));do 
+            ChooseGenre+=("${Genre[$i]}")  #repeat GenreWeight times... giving us a sloppy weighting mechanism
+        done
+    done
+    
+}
+
+
+function choose_next_song {
+#https://stackoverflow.com/questions/28544522/function-to-get-a-random-element-of-an-array-bash#28544597
+#randArrayElement(){ arr=("${!1}"); echo -n ${arr["$[RANDOM % ${#arr[@]}]"]}; }
+
+
+            TSongFileToAdd=$(cat "$ConfigSongFile" | awk -F '@@@' ''$lowbpm' <= $2 && $2 <= '$highbpm' {print $1}' | awk 'BEGIN { srand() } int(rand() * NR) == 0 { x = $0 } END { print x }' )        
+        fi
+        if cat "$ConfigLogFile" | grep -qF "$TSongFileToAdd"; then
+            echo "Song recently used; kicking back"
+            SongFileToAdd=""
+        else
+            SongFileToAdd=${TSongFileToAdd#$MPDBASE/}
+            #mark that we used it.
+            nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+            echo "$nowtime@@@$TSongFileToAdd" >> "$ConfigLogFile"
+        fi
+}
+
+function need_next_song {
+
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT add "$SongFileToAdd"
+    #reset match tests
+}
+
+function main {
+    rotate_songlog
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume on
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet play
+    get_songinfo
+    (echo qman-startup; mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT idleloop) | while read event
+    do
+        # Messy, but closes all subprocesses out
+        if [ ! -f /tmp/mpdq.pid ];then
+            killing
+        fi
+        if [ "$event" = "mixer" ]
+        then
+            continue
+        fi
+        if [ "$event" = "update" ]
+        then
+            continue
+        fi
+        playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
+        if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
+            need_next_song
+        fi  
+        ctime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+        Timertime=$(( ctime-3600 ))
+        # Has it been an hour?
+        if [[ $RunningLogRotateTime -lt $TimerTime ]];then
+            rotate_songlog
+            RunningLogRotateTime=$ctime
+        fi
+    done
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume off
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet pause-if-playing
+}
+
+killing(){
+    
+    while read VPID; do
+        if [ $VPID != "$$" ];then
+            kill -9 "$VPID" &> /dev/null
+        fi
+    done < /tmp/mpdq.pid
+    rm /tmp/mpdq.pid
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume off
+    exit
+}
+
+function show_help {
+
+echo -e "\n mpdq -[s|g|f|h]\n\n" \
+    "-c [instruction file to use]\n" \
+    "-d [override default priority # 1-10]\n" \
+    "-k Kill existing mpdq process \n" \
+    "-h showing this help message\n"
+}
+
+########################################################################
+# Wherein we parse arguments
+########################################################################
+init_config
+read_variables
+
+
+
+while [ $# -gt 0 ]; do
+option="$1"
+    case $option in
+        -c) 
+            shift
+            InstructionFile="$1"
+            ;;      
+        d)  
+            shift
+            DefaultWeight="$1"
+            ;;
+        -h)  
+            show_help
+            exit
+            ;;   
+        j)
+            DRIFT="TRUE"
+            ;;
+        k)  
+            ps aux | grep $0 | grep --color=auto -v -e grep | awk '{print $2}' >> /tmp/mpdq.pid
+            read_variables 
+            killing
+            ;;    
+		m)	#mood (genre) set
+			#user defined moods - with bpms and genres
+			echo "-m was triggered, Parameter: $OPTARG";;    
+
+        
+    esac
+done
+  #Will not be echoed if killing process, as killing exits the program first
+
+            echo "$$" >> /tmp/mpdq.pid
+                
+                
+            trap killing EXIT
+
+            main
+            ;;
