@@ -85,7 +85,8 @@ function determine_genre_weights {
 
     for ((i = 0; i < ${#Genre[@]}; i++));do
         for ((i2 = 0; i2 < ${#GenreWeight[$i]}; i2++));do 
-            ChooseGenre+=("${Genre[$i]}")  #repeat GenreWeight times... giving us a sloppy weighting mechanism
+            ChooseGenre+=("${Genre[$i]}")  
+            #add the name GenreWeight times... giving us a sloppy weighting mechanism (and if it's zero, it SHOULD exit before hitting this)
         done
     done
     
@@ -93,24 +94,41 @@ function determine_genre_weights {
 
 
 function choose_next_song {
-#https://stackoverflow.com/questions/28544522/function-to-get-a-random-element-of-an-array-bash#28544597
-#randArrayElement(){ arr=("${!1}"); echo -n ${arr["$[RANDOM % ${#arr[@]}]"]}; }
-
-
-            TSongFileToAdd=$(cat "$ConfigSongFile" | awk -F '@@@' ''$lowbpm' <= $2 && $2 <= '$highbpm' {print $1}' | awk 'BEGIN { srand() } int(rand() * NR) == 0 { x = $0 } END { print x }' )        
-        fi
-        if cat "$ConfigLogFile" | grep -qF "$TSongFileToAdd"; then
-            echo "Song recently used; kicking back"
-            SongFileToAdd=""
-        else
-            SongFileToAdd=${TSongFileToAdd#$MPDBASE/}
-            #mark that we used it.
-            nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-            echo "$nowtime@@@$TSongFileToAdd" >> "$ConfigLogFile"
-        fi
+    
+    #Take the already weighted array and choose a random element
+    ChosenGenre=${ChooseGenre["$[RANDOM % ${#ChooseGenre[@]}]"]}
+    SongStem=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT search genre "$ChosenGenre" | shuf -n1)
+    SongFile="$MPDBASE/$SongStem"
+    #check against the previously played songs
+    if cat "$ConfigLogFile" | grep -qF "$TSongFileToAdd"; then
+        echo "Song recently used; kicking back"
+        SongFileToAdd=""
+    else
+        SongFileToAdd=${TSongFileToAdd#$MPDBASE/}
+        #mark that we used it.
+        nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+        echo "$nowtime@@@$TSongFileToAdd" >> "$ConfigLogFile"
+    fi
 }
 
 function need_next_song {
+
+    SongFileToAdd=""
+
+    while [ -z "$SongFileToAdd" ];do
+        #this increases the acceptable BPM range when there are lots of kickbacks
+        echo "Searching for song within BPM range of $BPM_RANGE"
+        choose_next_song
+        BPM_RANGE=$((BPM_RANGE+counter))
+        counter=$((counter+1))
+        #If a match can't be found with a wide BPM range we will try
+        #to get a good BPM match in all genres
+        if [ "$counter" == "10"  ] && [ -z "$SkipGenreMatch"];then
+            counter=0
+            SkipGenreMatch="TRUE"
+        fi
+    done  
+    
 
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT add "$SongFileToAdd"
     #reset match tests
