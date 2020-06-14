@@ -166,7 +166,10 @@ function main {
 }
 
 function create_example(){
-    #todo - create example isntruction file
+    
+    echo "Default=1" > "$ConfigDir/example_instruction"
+    mpc list genre | sed 's/$/=1/' >> "$ConfigDir/example_instruction"
+
 }
 
 function killing(){
@@ -188,6 +191,7 @@ echo -e "\n mpdq -[s|g|f|h]\n\n" \
     "-c [instruction file to use]\n" \
     "-d [override default priority # 1-10]\n" \
     "-k Kill existing mpdq process \n" \
+    "-e Kill existing mpdq process \n" \    
     "-h showing this help message\n"
 }
 
@@ -201,9 +205,8 @@ while [ $# -gt 0 ]; do
 option="$1"
     case $option in
         -e) 
-            shift
-            ExampleOut="$1"
             create_example
+            exit
             ;;      
         -c) 
             shift
