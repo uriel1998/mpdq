@@ -5,7 +5,7 @@
 ########################################################################
 
 ConfigDir=$HOME/.config/mpdq
-ConfigFile=$HOME/.config/mpdq/mpdq.rc
+ConfigFile=$HOME/.config/mpdq/mpdq.ini
 ConfigLogFile=$HOME/.config/mpdq/playedsongs.log
 RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
 SCRIPT=$0
@@ -34,7 +34,8 @@ function read_variables() {
         MPD_HOST=${line[1]}
         MPD_PORT=${line[2]}
         MPD_PASS=${line[3]}
-        SONGAGE=${line[6]}
+        PLAYLIST_TRIGGER=${line[4]}
+        SONGAGE=${line[5]}
     else
         exit
     fi
@@ -100,14 +101,14 @@ function choose_next_song {
     SongStem=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT search genre "$ChosenGenre" | shuf -n1)
     SongFile="$MPDBASE/$SongStem"
     #check against the previously played songs
-    if cat "$ConfigLogFile" | grep -qF "$TSongFileToAdd"; then
+    if cat "$ConfigLogFile" | grep -qF "$SongFile"; then
         echo "Song recently used; kicking back"
         SongFileToAdd=""
     else
-        SongFileToAdd=${TSongFileToAdd#$MPDBASE/}
+        SongFileToAdd="$SongFile"
         #mark that we used it.
         nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-        echo "$nowtime@@@$TSongFileToAdd" >> "$ConfigLogFile"
+        echo "$nowtime@@@$SongFileToAdd" >> "$ConfigLogFile"
     fi
 }
 
@@ -115,30 +116,21 @@ function need_next_song {
 
     SongFileToAdd=""
 
+    #until it returns a valid match
     while [ -z "$SongFileToAdd" ];do
-        #this increases the acceptable BPM range when there are lots of kickbacks
-        echo "Searching for song within BPM range of $BPM_RANGE"
         choose_next_song
-        BPM_RANGE=$((BPM_RANGE+counter))
-        counter=$((counter+1))
-        #If a match can't be found with a wide BPM range we will try
-        #to get a good BPM match in all genres
-        if [ "$counter" == "10"  ] && [ -z "$SkipGenreMatch"];then
-            counter=0
-            SkipGenreMatch="TRUE"
-        fi
     done  
     
-
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT add "$SongFileToAdd"
     #reset match tests
+    SongFileToAdd=""
 }
 
 function main {
     rotate_songlog
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume on
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet play
-    get_songinfo
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --random off    
     (echo qman-startup; mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT idleloop) | while read event
     do
         # Messy, but closes all subprocesses out
@@ -195,8 +187,6 @@ echo -e "\n mpdq -[s|g|f|h]\n\n" \
 ########################################################################
 init_config
 read_variables
-
-
 
 while [ $# -gt 0 ]; do
 option="$1"
