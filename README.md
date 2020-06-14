@@ -22,10 +22,13 @@ randomness while autoqueuing MPD without relying on external services.
 `mpdq` is a auto-queing system for MPD to create a flexible and configurable 
 "party mode" effect with randomization and (re)discovery of your own music. 
 Inspired by the eclectic soundtracks of *Letterkenny*, *High Fidelity*, 
-*Doom Patrol*, and many more.
+*Doom Patrol*, and many more.  (More explanation for *why* is at [my blog](https://ideatrash.net)
 
 `mpdq` will autoqueue random tracks from your existing music library, with 
-(very) configurable weighting by genre and simple defaults.
+(very) configurable weighting by genre and simple defaults.  
+
+Because it uses `mpd`'s own data, new tracks and changes to your music library 
+will be incorporated when `mpd` is updated.
 
 If you are looking for the older, heaver, and BPM-using version of `mpdq`, 
 those files are in the `bpm_version` directory of this repository.
@@ -104,6 +107,10 @@ Gothic=1
 
 **Capitalization Matters Here**
 
+`mpdq` can also create an example instruction file with *all* genres listed so 
+that you can check your genre names properly.  It won't *hurt* to have all the 
+genres listed, but it is totally unneeded.
+
 ## 6. Usage
 
 `mpdq [-d #][-c /path/to/file][-kh]`
@@ -113,6 +120,7 @@ Gothic=1
 * -c : Which instruction file to use
 * -d : Override the default priority in the instruction file
 * -k : Kill a currently running `mpdq` process.
+* -e : Create an example instruction file at $HOME/.config/mpdq/example_instruction.
 * -h : Show a short help message.
 
 `mpdq` is meant to be run in the background. Because you define the hostname, 
