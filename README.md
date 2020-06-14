@@ -113,7 +113,7 @@ genres listed, but it is totally unneeded.
 
 ## 6. Usage
 
-`mpdq [-d #][-c /path/to/file][-kh]`
+`mpdq [-d #][-c /path/to/file][-khe]`
 
 `mpdq` has the following command line switches:
 
