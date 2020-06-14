@@ -50,16 +50,27 @@ linux-like distros:
 * Create $HOME/.config/mpdq
 * Place mpdq.ini in $HOME/.config/mpdq
 
-This file (example provided) contains only the following lines in 
-*this specific order*:
+This file (example provided) contains only the following lines:
 
 ```
-/directory/to/music
-hostname.of.mpd
+musicdir=/directory/to/music
+mpdserver=hostname.of.mpd
+mpdport=6600
+mpdpass=mpd_password
+queuesize=10
+hours=8
+```
+
+The last two manage the size of queue that `mpdq` maintains and how many hours 
+after playing a song that `mpdq` will *not* play it again.  Defaults are:
+
+```
+$HOME/Music
+localhost
 6600
-password
-number of songs to maintain in queue
-time (in hours) to not repeat a song
+(no password)
+10
+8
 ```
 
 ## 5. Setup
@@ -86,10 +97,12 @@ This allows for both very eclectic selections (as with the example above) or
 very focused selections, such as with the example below:
 
 ```
-default=0
-industrial=1
-gothic=1
+Default=0
+Industrial=1
+Gothic=1
 ```
+
+**Capitalization Matters Here**
 
 ## 6. Usage
 
