@@ -4,7 +4,7 @@ Automatic MPD playlist or party mode creator to provide complexity and
 randomness while autoqueuing MPD without relying on external services.
 
 
-![agaetr logo](https://raw.githubusercontent.com/uriel1998/agaetr/master/agaetr-open-graph.png "logo")
+![mpdq logo](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq-open-graph.png "logo")
 
 ## Contents
  1. [About](#1-about)
@@ -59,7 +59,7 @@ hostname.of.mpd
 6600
 password
 number of songs to maintain in queue
-time (in hours) to avoid repeating song
+time (in hours) to not repeat a song
 ```
 
 ## 5. Setup
@@ -105,5 +105,9 @@ gothic=1
 `mpdq` is meant to be run in the background. Because you define the hostname, 
 it does *not* have to be on the same machine running MPD.
 
+`mpdq` logs what songs it has played, and will not repeat the same song during 
+the time specified in `mpdq.ini`.
 
 ## 7. TODO
+
+* Make the ini look like an ini
