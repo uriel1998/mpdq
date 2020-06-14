@@ -39,7 +39,6 @@ function read_variables() {
     else
         exit
     fi
-#    mapfile -t SongFiles < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT listall | awk -v prefix="$MPDBASE/" '{print prefix $0}' )
     mapfile -t Genre < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre | sed -r 's/\ /_/g' | sed -r 's/\&/ and /g' )
 }
 
@@ -55,10 +54,10 @@ function rotate_songlog {
 }
 
 
-
-
 function read_instructions {
 
+
+#TODO
 #read in - one line might be (and is overridden by cli switch)
 #default=VALUE
 #then 0-infinity of
