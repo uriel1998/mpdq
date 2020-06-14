@@ -53,22 +53,23 @@ function rotate_songlog {
 }
 
 
-function read_instructions {
+function read_instructions() {
 
     if [ -f "$InstructionFile" ];then
-    while read -r line; do
-        IGenre=$(echo "$line" | cut -d = -f 1) 
-        IWeight=$(echo "$line" | cut -d = -f 2-) 
-        
-        if [ "${IGenre}" = "Default" ];then
-            if [ -z "$DefaultWeight" ];then
-                DefaultWeight="$IWeight"
+        while read -r line; do
+            IGenre=$(echo "$line" | cut -d = -f 1) 
+            IWeight=$(echo "$line" | cut -d = -f 2-) 
+            
+            if [ "${IGenre}" = "Default" ];then
+                if [ -z "$DefaultWeight" ];then
+                    DefaultWeight="$IWeight"
+                fi
+            else
+                ModGenre+=("${IGenre}")  
+                ModValue+=("${IWeight}")  
             fi
-        else
-            ModGenre+=("${IGenre}")  
-            ModValue+=("${IWeight}")  
-        fi
-    done < "$InstructionFile"
+        done < "$InstructionFile"
+    fi
 }
 
 
@@ -187,12 +188,12 @@ function killing(){
 
 function show_help {
 
-echo -e "\n mpdq -[s|g|f|h]\n\n" \
-    "-c [instruction file to use]\n" \
-    "-d [override default priority # 1-10]\n" \
-    "-k Kill existing mpdq process \n" \
-    "-e Kill existing mpdq process \n" \    
-    "-h showing this help message\n"
+echo "mpdq [-d #][-c /path/to/file][-khe]" 
+echo "  -c [instruction file to use]" 
+echo "  -d [override default priority # 1-10]" 
+echo "  -k Kill existing mpdq process " 
+echo "  -e Create example instruction file " 
+echo "  -h Show this help message"
 }
 
 ########################################################################
