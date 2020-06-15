@@ -102,7 +102,7 @@ function determine_genre_weights {
 function choose_next_song {
     
     #Take the already weighted array and choose a random element
-    
+#TODO:  Something about the random bit is off here and I get errors    
     echo "${ChooseGenre[RANDOM % $#]}"
     ChosenGenre=$(printf '%s\n' "${ChooseGenre[RANDOM % $#]}")
     echo "$ChosenGenre"
