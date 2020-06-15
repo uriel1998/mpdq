@@ -102,7 +102,10 @@ function determine_genre_weights {
 function choose_next_song {
     
     #Take the already weighted array and choose a random element
-    ChosenGenre=${ChooseGenre["$[RANDOM % ${#ChooseGenre[@]}]"]}
+    
+    echo "${ChooseGenre[RANDOM % $#]}"
+    ChosenGenre=$(printf '%s\n' "${ChooseGenre[RANDOM % $#]}")
+    echo "$ChosenGenre"
     SongStem=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT search genre "$ChosenGenre" | shuf -n1)
     SongFile="$MPDBASE/$SongStem"
     #check against the previously played songs
@@ -126,7 +129,12 @@ function need_next_song {
         choose_next_song
     done  
     
-    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT add "$SongFileToAdd"
+    
+    #Command=$(printf "mpc --host %s@%s --port %s add \"%s\"" "$MPD_PASS" "$MPD_HOST" "$MPD_PORT" "$SongFileToAdd")
+    #eval "$Command"
+    SongFileToAdd=${SongFileToAdd#$MPDBASE/}
+
+    `mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT add "$SongFileToAdd"`
     #reset match tests
     SongFileToAdd=""
 }
@@ -135,7 +143,8 @@ function main {
     rotate_songlog
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume on
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet play
-    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --random off    
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet random off    
+
     (echo qman-startup; mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT idleloop) | while read event
     do
         # Messy, but closes all subprocesses out
@@ -212,6 +221,7 @@ option="$1"
         -c) 
             shift
             InstructionFile="$1"
+            shift
             ;;      
         -d)  
             shift
@@ -227,7 +237,9 @@ option="$1"
             killing
             ;;            
     esac
+    
 done
+    echo "FUCK"
   #Will not be echoed if killing process, as killing exits the program first
 
             echo "$$" >> /tmp/mpdq.pid
