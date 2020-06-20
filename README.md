@@ -9,7 +9,6 @@ randomness while autoqueuing MPD without relying on external services.
 ![mpdq in actino](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq.gif "mpdq in action")
 
 
-
 ## Contents
  1. [About](#1-about)
  2. [License](#2-license)
@@ -48,7 +47,7 @@ linux-like distros:
 
 * [mpd]
 * [mpc](http://git.musicpd.org/cgit/master/mpc.git/)  
-* shuf
+* [shuf]
 * [grep](http://en.wikipedia.org/wiki/Grep)  
 * [bash](https://www.gnu.org/software/bash/)  
 
@@ -84,18 +83,21 @@ localhost
 
 
 The behavior of `mpdq` is governed by simple instruction files, as many (or 
-few) as you desire.  Each instruction file is a series of lines in the format 
-`genre=weight` like so:
+few) as you desire.  The location of the instruction file does not matter, and 
+must be specified on the command line.  Without an instruction file, `mpdq` will 
+just shuffle through your entire library with an equal weight to each genre. 
+
+Each instruction file is a series of lines in the format `genre=weight` like so:
 
 ```
-default=1
-rock=3
-classical=0
+Default=1
+Rock=3
+Classical=0
 
 ```
 
 Rather than go through all the genres and subgenres of your music library and 
-explicitly defining each one, the `default` line assigns a weight to all genres 
+explicitly defining each one, the `Default` line assigns a weight to all genres 
 not otherwise explictly named. Genres with higher number values will show up 
 more often.  In the example above, all genres have a weight of "1" except for 
 Rock and Classical.  Rock will show up more often, while Classical will not 
