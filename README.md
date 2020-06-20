@@ -87,6 +87,7 @@ few) as you desire.  Each instruction file is a series of lines in the format
 default=1
 rock=3
 classical=0
+
 ```
 
 Rather than go through all the genres and subgenres of your music library and 
@@ -103,6 +104,7 @@ very focused selections, such as with the example below:
 Default=0
 Industrial=1
 Gothic=1
+
 ```
 
 **Capitalization Matters Here**
@@ -110,6 +112,9 @@ Gothic=1
 `mpdq` can also create an example instruction file with *all* genres listed so 
 that you can check your genre names properly.  It won't *hurt* to have all the 
 genres listed, but it is totally unneeded.
+
+The instruction file should end in a newline. If it does not, `mpdq` will add 
+one automatically.
 
 ## 6. Usage
 
