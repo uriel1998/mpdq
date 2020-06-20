@@ -55,7 +55,8 @@ function rotate_songlog {
     difftime=$(( "$SONGAGE" * 60 * 60 ))
     hightime=$(( "$currenttime"-"$difftime" ))
     echo "Eliminating song log entries older than $SONGAGE hours."
-    cat "$ConfigLogFile" | awk -F '@@@' '$1 <= $hightime' > "$tempfile"
+    echo "$hightime / $difftime"
+    cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 < hightime'  > "$tempfile"
     mv -f "$tempfile" "$ConfigLogFile"
 }
 
