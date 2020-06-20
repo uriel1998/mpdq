@@ -38,28 +38,28 @@ function read_variables() {
     if [[ `echo "$bob" | grep -c -e "^hours="` > 0 ]];then SONGAGE=$(echo "$bob" | grep -e "^hours=" | cut -d = -f 2- );else SONGAGE="8";fi
 
     # Only need to do this at the beginning of the run
-    mapfile -t Genre < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre | sed -r 's/\ /_/g' | sed -r 's/\&/ and /g' )
+    mapfile -t Genre < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre )
 }
 
 function rotate_songlog {
 
     tempfile=$(mktemp)
     currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-    difftime=$(( SONGAGE * 60 * 60 ))
-    hightime=$(( currenttime-difftime ))
+    difftime=$(( "$SONGAGE" * 60 * 60 ))
+    hightime=$(( "$currenttime"-"$difftime" ))
     echo "Eliminating song log entries older than $SONGAGE hours."
-    cat "$ConfigLogFile" | awk -F '@@@' '$1 <= $hightime' > "$tempfile"
+    cat "$ConfigLogFile" | awk -F '@@@' '$1 >= $hightime' > "$tempfile"
     mv -f "$tempfile" "$ConfigLogFile"
 }
 
 
 function read_instructions() {
-
+ModGenre=()
+ModValue=()
     if [ -f "$InstructionFile" ];then
         while read -r line; do
             IGenre=$(echo "$line" | cut -d = -f 1) 
             IWeight=$(echo "$line" | cut -d = -f 2-) 
-            
             if [ "${IGenre}" = "Default" ];then
                 if [ -z "$DefaultWeight" ];then
                     DefaultWeight="$IWeight"
@@ -70,42 +70,55 @@ function read_instructions() {
             fi
         done < "$InstructionFile"
     fi
+    
 }
 
 
 function determine_genre_weights {
-    
+GenreWeight=()    
 #This is not light, but it's only done once a run.
 #loop through genre, if not in array ModGenre, then apply DefaultWeight
     for ((i = 0; i < ${#Genre[@]}; i++));do
         for ((i2 = 0; i2 < ${#ModGenre[@]}; i2++));do
-            if [[ "${Genre[$i]}" == "${ModGenre[$i2]}" ]];then   #Think I remembered the syntax rightly.
-                GenreWeight+="${ModValue[$i2]}"
+            echo "${Genre[$i]} ${ModGenre[$i2]}"
+            if [[ "${Genre[$i]}" =~ "${ModGenre[$i2]}" ]];then   #Think I remembered the syntax rightly.
+                GenreWeight[$i]=$(echo "${ModValue[$i2]}")
+                break
             else
-                GenreWeight+="$DefaultWeight"
+                GenreWeight[$i]=$(echo "$DefaultWeight")
             fi
         done
+        echo "$i ${Genre[$i]} ${GenreWeight[$i]} $DefaultWeight"
     done
 
-#populating the "weighted" array   
-
+    #populating the "weighted" array   
+    ChooseGenre=()
     for ((i = 0; i < ${#Genre[@]}; i++));do
+        #echo "${Genre[$i]}"
         for ((i2 = 0; i2 < ${#GenreWeight[$i]}; i2++));do 
+            #echo "${GenreWeight[$i]}"
             ChooseGenre+=("${Genre[$i]}")  
+            
             #add the name GenreWeight times... giving us a sloppy weighting mechanism (and if it's zero, it SHOULD exit before hitting this)
         done
     done
-
+read
 }
 
 
 function choose_next_song {
     
     #Take the already weighted array and choose a random element
-#TODO:  Something about the random bit is off here and I get errors    
-    echo "${ChooseGenre[RANDOM % $#]}"
-    ChosenGenre=$(printf '%s\n' "${ChooseGenre[RANDOM % $#]}")
+#TODO:  Something about the random bit is off here and I get errors   
+    echo "${ChooseGenre[@]}"
+    read
+    ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
     echo "$ChosenGenre"
+    read
+    
+    #ChosenGenre=$(printf '%s\n' "${ChooseGenre[RANDOM % $#]}")
+    echo "$ChosenGenre"
+read
     SongStem=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT search genre "$ChosenGenre" | shuf -n1)
     SongFile="$MPDBASE/$SongStem"
     #check against the previously played songs
@@ -239,7 +252,8 @@ option="$1"
     esac
     
 done
-    echo "FUCK"
+    read_instructions
+    determine_genre_weights
   #Will not be echoed if killing process, as killing exits the program first
 
             echo "$$" >> /tmp/mpdq.pid
