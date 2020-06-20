@@ -6,6 +6,10 @@ randomness while autoqueuing MPD without relying on external services.
 
 ![mpdq logo](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq-open-graph.png "logo")
 
+![mpdq in actino](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq.gif "mpdq in action")
+
+
+
 ## Contents
  1. [About](#1-about)
  2. [License](#2-license)
