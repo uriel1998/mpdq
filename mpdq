@@ -80,7 +80,6 @@ GenreWeight=()
 #loop through genre, if not in array ModGenre, then apply DefaultWeight
     for ((i = 0; i < ${#Genre[@]}; i++));do
         for ((i2 = 0; i2 < ${#ModGenre[@]}; i2++));do
-            echo "${Genre[$i]} ${ModGenre[$i2]}"
             if [[ "${Genre[$i]}" =~ "${ModGenre[$i2]}" ]];then   #Think I remembered the syntax rightly.
                 GenreWeight[$i]=$(echo "${ModValue[$i2]}")
                 break
@@ -88,21 +87,21 @@ GenreWeight=()
                 GenreWeight[$i]=$(echo "$DefaultWeight")
             fi
         done
-        echo "$i ${Genre[$i]} ${GenreWeight[$i]} $DefaultWeight"
     done
 
     #populating the "weighted" array   
     ChooseGenre=()
     for ((i = 0; i < ${#Genre[@]}; i++));do
         #echo "${Genre[$i]}"
-        for ((i2 = 0; i2 < ${#GenreWeight[$i]}; i2++));do 
-            #echo "${GenreWeight[$i]}"
-            ChooseGenre+=("${Genre[$i]}")  
+        for ((i2 = 1; i2 <= "${GenreWeight[$i]}"; i2++));do 
+            if [ "${GenreWeight[$i]}" != "0" ]; then
+                ChooseGenre+=("${Genre[$i]}")  
+            fi
             
             #add the name GenreWeight times... giving us a sloppy weighting mechanism (and if it's zero, it SHOULD exit before hitting this)
         done
     done
-read
+
 }
 
 
@@ -115,7 +114,7 @@ function choose_next_song {
     ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
     echo "$ChosenGenre"
     read
-    
+        
     #ChosenGenre=$(printf '%s\n' "${ChooseGenre[RANDOM % $#]}")
     echo "$ChosenGenre"
 read
