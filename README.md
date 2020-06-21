@@ -45,9 +45,9 @@ This project is licensed under the MIT License. For the full license, see `LICEN
 These are probably already installed or are easily available from your distro on
 linux-like distros:  
 
-* [mpd]
+* [mpd](https://www.musicpd.org/)
 * [mpc](http://git.musicpd.org/cgit/master/mpc.git/)  
-* [shuf]
+* [shuf](https://linux.die.net/man/1/shuf)
 * [grep](http://en.wikipedia.org/wiki/Grep)  
 * [bash](https://www.gnu.org/software/bash/)  
 
@@ -142,4 +142,3 @@ the time specified in `mpdq.ini`.
 
 ## 7. TODO
 
-* Make the ini look like an ini
