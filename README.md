@@ -25,7 +25,7 @@ randomness while autoqueuing MPD without relying on external services.
 `mpdq` is a auto-queing system for MPD to create a flexible and configurable 
 "party mode" effect with randomization and (re)discovery of your own music. 
 Inspired by the eclectic soundtracks of *Letterkenny*, *High Fidelity*, 
-*Doom Patrol*, and many more.  (More explanation for *why* is at [my blog](https://ideatrash.net)
+*Doom Patrol*, and many more.  (More explanation for *why* is at [my blog](https://ideatrash.net/?p=121759).  
 
 `mpdq` will autoqueue random tracks from your existing music library, with 
 (very) configurable weighting by genre and simple defaults.  
