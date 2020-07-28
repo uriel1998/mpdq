@@ -101,7 +101,16 @@ function determine_genre_weights {
     #This is not light, but it's only done once a run.
     #loop through genre, if not in array ModGenre, then apply DefaultWeight
 
+    TotalNumSongs=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT listall | wc -l)
     for ((i = 0; i < ${#Genre[@]}; i++));do
+        #determine weight of genre in music directory
+        
+        GenreNumSongs[$i]=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT find genre "${Genre[$i]}" | wc -l)
+        
+        GenreSongWeight[$i]=$(printf "%.0f\n" `echo "(${GenreNumSongs[$i]} / $TotalNumSongs)*1000" | bc -l`)
+        echo "${Genre[$i]} $TotalNumSongs ${GenreNumSongs[$i]} ${GenreSongWeight[$i]}"
+        
+        
         for ((i2 = 0; i2 < ${#ModGenre[@]}; i2++));do
             if [[ "${Genre[$i]}" =~ "${ModGenre[$i2]}" ]];then   
                 GenreWeight[$i]=$(echo "${ModValue[$i2]}")
@@ -113,9 +122,9 @@ function determine_genre_weights {
     done
 
     #populating the "weighted" array   
-    for ((i = 0; i < ${#Genre[@]}; i++));do
+    for (( i = 0; i < ${#Genre[@]}; i++));do
         #echo "${Genre[$i]}"
-        for ((i2 = 1; i2 <= "${GenreWeight[$i]}"; i2++));do 
+        for (( i2 = 1; i2 <= "${GenreWeight[$i]}"; i2++ ));do 
             if [ "${GenreWeight[$i]}" != "0" ]; then
                 ChooseGenre+=("${Genre[$i]}")  
             fi
