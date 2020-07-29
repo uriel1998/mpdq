@@ -108,17 +108,22 @@ function determine_genre_weights {
         GenreNumSongs[$i]=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT find genre "${Genre[$i]}" | wc -l)
         
         GenreSongWeight[$i]=$(printf "%.0f\n" `echo "(${GenreNumSongs[$i]} / $TotalNumSongs)*1000" | bc -l`)
-        echo "${Genre[$i]} $TotalNumSongs ${GenreNumSongs[$i]} ${GenreSongWeight[$i]}"
+        #echo "${Genre[$i]} $TotalNumSongs ${GenreNumSongs[$i]} ${GenreSongWeight[$i]}"
+        if [ ${GenreSongWeight[$i]} = 0 ];then
+            GenreSongWeight[$i]=1
         
+        fi
         
-        for ((i2 = 0; i2 < ${#ModGenre[@]}; i2++));do
-            if [[ "${Genre[$i]}" =~ "${ModGenre[$i2]}" ]];then   
-                GenreWeight[$i]=$(echo "${ModValue[$i2]}")
+        for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
+            if [[ "${Genre[$i]}" =~ "${ModGenre[$i2]}" ]];then 
+                GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${ModValue[$i2]}" | bc -l`) 
+                #GenreWeight[$i]=$(echo "${ModValue[$i2]}")
                 break
             else
-                GenreWeight[$i]=$(echo "$DefaultWeight")
+                GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${DefaultWeight}" | bc -l`) 
             fi
         done
+                    echo "${Genre[$i]} - ${GenreWeight[$i]}"
     done
 
     #populating the "weighted" array   
