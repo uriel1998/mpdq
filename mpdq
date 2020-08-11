@@ -68,10 +68,8 @@ function file_ends_with_newline() {
 
 function read_instructions() {
     if [ -f "$InstructionFile" ];then
-        echo "$InstructionFile"
         #Fixing if no newline
         if ! file_ends_with_newline "$InstructionFile";then
-            echo "SLDKJDF"
             cat "$InstructionFile" > "$tmp2"
             echo "" >> "$tmp2"
             mv -f "$tmp2" "$InstructionFile"
@@ -89,7 +87,7 @@ function read_instructions() {
                 ModGenre+=("${IGenre}")  
                 ModValue+=("${IWeight}")  
             fi
-        done < "$tmp2"
+        done < "$InstructionFile"
     else
         echo "No instruction file specified; using default values for all genres."
         if [ -z "$DefaultWeight" ];then
