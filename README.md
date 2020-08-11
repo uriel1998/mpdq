@@ -150,6 +150,56 @@ it does *not* have to be on the same machine running MPD.
 `mpdq` logs what songs it has played, and will not repeat the same song during 
 the time specified in `mpdq.ini`.
 
+### systemd unit
+
+If you wish to use mpdq as a systemd unit, this template works for me (obviously 
+change the home directory and user as appropriate, named `mpdq.service`:
+
+```
+[Unit]
+Description=Start mpdq service
+After=mpd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=steven
+Group=steven
+ExecStart=/home/steven/apps/mpdq/mpdq -c /home/steven/.config/mpdq/example_instruction_file
+ExecStop=/home/steven/apps/mpdq/mpdq -k
+WorkingDirectory=/home/steven
+
+[Install]
+WantedBy=multi-user.target
+
+```
+
+### using monit
+
+If you have `mpdq` set up as a systemd unit, reloading it if there's a change 
+to the MPD database is pretty easy with this configuration (again, changing 
+path names as appropriate:
+
+``
+check process mpdq with pidfile /tmp/mpdq.pid
+  start program "/bin/systemctl start mpdq.service"
+  stop program "/bin/systemctl stop mpdq.service"
+  depends on mpd_db
+
+
+check file mpd_db with path /home/steven/.mpd/tag_cache
+   if changed timestamp then restart
+```
+
+### using fswatch
+
+If you would rather use the [`fswatch`](https://github.com/emcrisostomo/fswatch) 
+utility to achive the same end, have cron call this script at a regular interval:
+
+```
+/usr/local/bin/fswatch /home/steven/.mpd/tag_cache | sudo /bin/systemctl stop mpdq.service && sudo /bin/systemctl start mpdq.service
+```
+
 ## 7. TODO
 
 * start tagging and releases
