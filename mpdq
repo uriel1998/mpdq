@@ -11,7 +11,7 @@ RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
 SCRIPT=$0
 InstructionFile=""
 DefaultPriority=1
-
+tmp2=$(mktemp)
 
 ModGenre=()
 ModValue=()
@@ -68,10 +68,14 @@ function file_ends_with_newline() {
 
 function read_instructions() {
     if [ -f "$InstructionFile" ];then
-    
+        echo "$InstructionFile"
         #Fixing if no newline
         if ! file_ends_with_newline "$InstructionFile";then
-            echo "" >> "$InstructionFile"
+            echo "SLDKJDF"
+            cat "$InstructionFile" > "$tmp2"
+            echo "" >> "$tmp2"
+            mv -f "$tmp2" "$InstructionFile"
+            rm "$tmp2"
         fi
     
         while IFS= read -r line; do
@@ -85,7 +89,7 @@ function read_instructions() {
                 ModGenre+=("${IGenre}")  
                 ModValue+=("${IWeight}")  
             fi
-        done < "$InstructionFile"
+        done < "$tmp2"
     else
         echo "No instruction file specified; using default values for all genres."
         if [ -z "$DefaultWeight" ];then
@@ -243,7 +247,7 @@ function killing(){
     done < /tmp/mpdq.pid
     rm /tmp/mpdq.pid
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume off
-    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet pause-if-playing
+    #mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet pause-if-playing
     exit
 }
 
@@ -257,6 +261,13 @@ function show_help {
     echo "  -h Show this help message"
 }
 
+function already_running {
+    if [ -f /tmp/mpdq.pid ];then 
+        echo "mpdq is already running; valid commands are -k or -h" >&2
+        exit 97
+    fi
+}
+
 ########################################################################
 # Wherein we parse arguments
 ########################################################################
@@ -267,15 +278,18 @@ while [ $# -gt 0 ]; do
 option="$1"
     case $option in
         -e) 
+            already_running
             create_example
             exit
             ;;      
         -c) 
+            already_running
             shift
             InstructionFile="$1"
             shift
             ;;      
-        -d)  
+        -d) 
+            already_running 
             shift
             DefaultWeight="$1"
             ;;
