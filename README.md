@@ -174,14 +174,27 @@ WantedBy=multi-user.target
 
 ```
 
-### using monit
+### Adjusting to changes
+
+If mpdq is running for any length of time, there will be library changes. I 
+realized this after adding a bunch of standup albums with the new genre "Standup" 
+and suddenly had Steven Wright talking after "Love Will Tear Us Apart".  To 
+fix this possible problem, you first have to set `Default=0` in the 
+instruction file loaded by systemd.  Then you have to have `mpdq` get restarted 
+whenever the MPD database changes.  You can either use `monit` or `fswatch` to 
+make this happen.
+
+### Reloading using monit
 
 If you have `mpdq` set up as a systemd unit, reloading it if there's a change 
 to the MPD database is pretty easy with this configuration (again, changing 
 path names as appropriate:
 
+(The "every 2 cycles" is because of the delay as `mpdq` starts up.)
+
 ``
 check process mpdq with pidfile /tmp/mpdq.pid
+  every 2 cycles
   start program "/bin/systemctl start mpdq.service"
   stop program "/bin/systemctl stop mpdq.service"
   depends on mpd_db
