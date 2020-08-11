@@ -134,6 +134,16 @@ one automatically.
 * -e : Create an example instruction file at $HOME/.config/mpdq/example_instruction.
 * -h : Show a short help message.
 
+`mpdq` will automatically pause if MPD is *not* set to:
+
+* random: off
+* repeat: off
+* consume: on
+
+So if you want to have "default" behavior back from MPD without interference 
+from `mpdq`, but want to leave the process running, just toggle any of those 
+values for MPD.
+
 `mpdq` is meant to be run in the background. Because you define the hostname, 
 it does *not* have to be on the same machine running MPD.
 
@@ -142,3 +152,5 @@ the time specified in `mpdq.ini`.
 
 ## 7. TODO
 
+* start tagging and releases
+* switch instruction file without ending process (perhaps part of the idle loop?)
