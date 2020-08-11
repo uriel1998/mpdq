@@ -123,7 +123,7 @@ function determine_genre_weights {
                 GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${DefaultWeight}" | bc -l`) 
             fi
         done
-                    echo "${Genre[$i]} - ${GenreWeight[$i]}"
+        echo "${Genre[$i]} - ${GenreWeight[$i]}"
     done
 
     #populating the "weighted" array   
@@ -202,10 +202,15 @@ function main {
         then
             continue
         fi
-        playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
-        if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
-            need_next_song
-        fi  
+
+        #If MPD is not set to repeat: off, random: off, and consume: on, just wait for the next idle loop
+        pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | awk -F ' ' '{print $4 $6 $8}')
+        if [ "$pauseme" == "offoffon" ];then
+            playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
+            if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
+                need_next_song
+            fi  
+        fi
         ctime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
         Timertime=$(( ctime-3600 ))
         # Has it been an hour?
