@@ -226,7 +226,7 @@ function main {
 function create_example(){
     
     echo "Default=1" > "$ConfigDir/example_instruction"
-    mpc list genre | sed 's/$/=1/' >> "$ConfigDir/example_instruction"
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre | sed 's/$/=1/' >> "$ConfigDir/example_instruction"
 
 }
 
