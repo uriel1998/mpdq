@@ -185,7 +185,8 @@ function main {
     
     rotate_songlog
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume on
-    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet play
+    #commented because otherwise it restarts with every load...
+    #mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet play
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet random off    
 
     (echo qman-startup; mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT idleloop) | while read event
@@ -222,7 +223,8 @@ function main {
         fi
     done
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume off
-    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet pause-if-playing
+    
+    #mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet pause-if-playing
 }
 
 function create_example(){
