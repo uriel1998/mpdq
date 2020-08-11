@@ -204,12 +204,15 @@ function main {
         fi
 
         #If MPD is not set to repeat: off, random: off, and consume: on, just wait for the next idle loop
-        pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | awk -F ' ' '{print $4 $6 $8}')
+        pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | awk -F ' ' '{print $4 $6 $10}')
+        echo "$pauseme"
         if [ "$pauseme" == "offoffon" ];then
             playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
             if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
                 need_next_song
             fi  
+        else
+            echo "Pausing... "
         fi
         ctime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
         Timertime=$(( ctime-3600 ))
