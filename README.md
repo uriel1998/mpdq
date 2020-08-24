@@ -192,7 +192,7 @@ path names as appropriate:
 
 (The "every 2 cycles" is because of the delay as `mpdq` starts up.)
 
-``
+```
 check process mpdq with pidfile /tmp/mpdq.pid
   every 2 cycles
   start program "/bin/systemctl start mpdq.service"
