@@ -113,7 +113,6 @@ function determine_genre_weights {
         #echo "${Genre[$i]} $TotalNumSongs ${GenreNumSongs[$i]} ${GenreSongWeight[$i]}"
         if [ ${GenreSongWeight[$i]} = 0 ];then
             GenreSongWeight[$i]=1
-        
         fi
         
         for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
