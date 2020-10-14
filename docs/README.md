@@ -3,10 +3,9 @@
 Automatic MPD playlist or party mode creator to provide complexity and 
 randomness while autoqueuing MPD without relying on external services.
 
-
 ![mpdq logo](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq-open-graph.png "logo")
 
-![mpdq in actino](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq.gif "mpdq in action")
+![mpdq in action](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq.gif "mpdq in action")
 
 
 ## Contents
@@ -16,7 +15,7 @@ randomness while autoqueuing MPD without relying on external services.
  4. [Installation](#4-installation)
  5. [Setup](#5-setup)
  6. [Usage](#6-usage)
- 7. [TODO](#12-todo)
+ 7. [TODO](#7-todo)
 
 ***
 
@@ -50,6 +49,8 @@ linux-like distros:
 * [shuf](https://linux.die.net/man/1/shuf)
 * [grep](http://en.wikipedia.org/wiki/Grep)  
 * [bash](https://www.gnu.org/software/bash/)  
+* [wc](https://www.computerhope.com/unix/uwc.htm)
+* [bc](https://www.geeksforgeeks.org/bc-command-linux-examples/)
 
 ## 4. Installation
 
@@ -65,6 +66,7 @@ mpdport=6600
 mpdpass=mpd_password
 queuesize=10
 hours=8
+mode=simple  
 ```
 
 The last two manage the size of queue that `mpdq` maintains and how many hours 
@@ -77,10 +79,12 @@ localhost
 (no password)
 10
 8
+simple  
 ```
 
-## 5. Setup
+See below under [Setup](#5-setup) for the difference in "modes".
 
+## 5. Setup
 
 The behavior of `mpdq` is governed by simple instruction files, as many (or 
 few) as you desire.  The location of the instruction file does not matter, and 
@@ -121,6 +125,22 @@ genres listed, but it is totally unneeded.
 
 The instruction file should end in a newline. If it does not, `mpdq` will add 
 one automatically.
+
+
+### Mode
+
+There are three possible weighting modes for `mpdq`:
+
+* **simple** - the default weighting. It only factors in whatever genre weight 
+you defined in the instruction file.
+* **songs** - this weighting factors in the number of songs you have in each genre 
+as well as the genre weight you defined in the instruction file. This will result 
+in increased representation from genres you have more songs in.
+* **genre** - this weighting uses the genre weight as *the maximum number of songs in that genre to be played per hour*. 
+So if you put `Pop=1`, you will *only* hear 1 song from that genre per hour. 
+If all genres are (somehow) exhausted in one hour, it will just use the randomly selected genre.
+
+If you do not have mode defined, it defaults to **simple**.
 
 ## 6. Usage
 
@@ -215,5 +235,5 @@ utility to achive the same end, have cron call this script at a regular interval
 
 ## 7. TODO
 
-* start tagging and releases
+* reinstate bpm option
 * switch instruction file without ending process (perhaps part of the idle loop?)
