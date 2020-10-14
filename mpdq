@@ -48,10 +48,11 @@ function read_variables() {
     if [[ `echo "$bob" | grep -c -e "^mpdpass="` > 0 ]];then MPD_PASS=$(echo "$bob" | grep -e "^mpdpass=" | cut -d = -f 2- );else MPD_PASS="";fi
     if [[ `echo "$bob" | grep -c -e "^queuesize="` > 0 ]];then PLAYLIST_TRIGGER=$(echo "$bob" | grep -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
     if [[ `echo "$bob" | grep -c -e "^hours="` > 0 ]];then SONGAGE=$(echo "$bob" | grep -e "^hours=" | cut -d = -f 2- );else SONGAGE="8";fi
-    if [[ `echo "$bob" | grep -c -e "^mode="` > 0 ]];then MODE=$(echo "$bob" | grep -e "^mode=" | cut -d = -f 2- );else MODE="SIMPLE";fi
+    if [[ `echo "$bob" | grep -c -e "^mode="` > 0 ]];then MODE=$(echo "$bob" | grep -e "^mode=" | cut -d = -f 2- );else MODE="simple";fi
 
     # Only need to do this at the beginning of the run
     mapfile -t Genre < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre )
+    NUMGENRES=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre | wc -l)
 }
 
 function rotate_songlog {
@@ -124,7 +125,7 @@ function determine_genre_weights {
     TotalNumSongs=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT listall | wc -l)
     for ((i = 0; i < ${#Genre[@]}; i++));do
         #determine weight of genre in music directory
-        if [[ "${mode}" =~ "song" ]];then
+        if [[ "${MODE}" =~ "song" ]];then
             GenreNumSongs[$i]=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT find genre "${Genre[$i]}" | wc -l)
         
             GenreSongWeight[$i]=$(printf "%.0f\n" `echo "(${GenreNumSongs[$i]} / $TotalNumSongs)*1000" | bc -l`)
@@ -173,15 +174,17 @@ function choose_next_song {
     #Take the already weighted array and choose a random element  
 
     # Doing Genre played time check
-    
-    if [[ "${mode}" =~ "genre" ]];then
+    if [[ "${MODE}" =~ "genre" ]];then 
+        counter=0 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
         OkayGenre=""
-        while [ -z ${OkayGenre} ];do 
+        while [ -z ${OkayGenre} ] && [ ${counter} -lt ${NUMGENRES} ] ;do 
+            counter=$((counter+1))
             ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
             UsedGenre=$(grep -c "${ChosenGenre}" "${GenreLogFile}")
             for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
                 if [[ "${ChosenGenre}" =~ "${ModGenre[$i2]}" ]];then 
-                    if [ $UsedGenre -gt GenreWeight[$i] ]; then
+                    if [ ${UsedGenre} -gt ${GenreWeight[$i2]} ]; then
+                        echo "${ChosenGenre} already used up this hour, moving on"
                         OkayGenre=""
                     else
                         OkayGenre="YES"
@@ -286,7 +289,7 @@ function create_example(){
     
     echo "Default=1" > "$ConfigDir/example_instruction"
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre | sed 's/$/=1/' >> "$ConfigDir/example_instruction"
-
+    
 }
 
 function killing(){
