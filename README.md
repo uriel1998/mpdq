@@ -3,10 +3,9 @@
 Automatic MPD playlist or party mode creator to provide complexity and 
 randomness while autoqueuing MPD without relying on external services.
 
-
 ![mpdq logo](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq-open-graph.png "logo")
 
-![mpdq in actino](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq.gif "mpdq in action")
+![mpdq in action](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq.gif "mpdq in action")
 
 
 ## Contents
@@ -50,6 +49,8 @@ linux-like distros:
 * [shuf](https://linux.die.net/man/1/shuf)
 * [grep](http://en.wikipedia.org/wiki/Grep)  
 * [bash](https://www.gnu.org/software/bash/)  
+* [wc](https://www.computerhope.com/unix/uwc.htm)
+* [bc](https://www.geeksforgeeks.org/bc-command-linux-examples/)
 
 ## 4. Installation
 
@@ -234,7 +235,5 @@ utility to achive the same end, have cron call this script at a regular interval
 
 ## 7. TODO
 
-
-* Weighting mechanism chooser - default, by # of songs, and add "genre per hour"
-* start tagging and releases
+* reinstate bpm option
 * switch instruction file without ending process (perhaps part of the idle loop?)
