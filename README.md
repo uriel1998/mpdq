@@ -138,9 +138,9 @@ as well as the genre weight you defined in the instruction file. This will resul
 in increased representation from genres you have more songs in.
 * **genre** - this weighting uses the genre weight as *the maximum number of songs in that genre to be played per hour*. 
 So if you put `Pop=1`, you will *only* hear 1 song from that genre per hour. 
+If all genres are (somehow) exhausted in one hour, it will just use the randomly selected genre.
 
 If you do not have mode defined, it defaults to **simple**.
-
 
 ## 6. Usage
 
