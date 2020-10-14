@@ -7,6 +7,7 @@
 ConfigDir=$HOME/.config/mpdq
 ConfigFile=$HOME/.config/mpdq/mpdq.ini
 ConfigLogFile=$HOME/.config/mpdq/playedsongs.log
+GenreLogFile=$HOME/.config/mpdq/playedgenres.log
 RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
 SCRIPT=$0
 InstructionFile=""
@@ -26,6 +27,10 @@ ChooseGenre=()
 
 function init_config() {
 
+    if [ -f "$GenreLogFile" ];then
+        touch "$GenreLogFile"
+    fi    
+    
     if [ -f "$ConfigLogFile" ];then
         touch "$ConfigLogFile"
     fi    
@@ -43,6 +48,7 @@ function read_variables() {
     if [[ `echo "$bob" | grep -c -e "^mpdpass="` > 0 ]];then MPD_PASS=$(echo "$bob" | grep -e "^mpdpass=" | cut -d = -f 2- );else MPD_PASS="";fi
     if [[ `echo "$bob" | grep -c -e "^queuesize="` > 0 ]];then PLAYLIST_TRIGGER=$(echo "$bob" | grep -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
     if [[ `echo "$bob" | grep -c -e "^hours="` > 0 ]];then SONGAGE=$(echo "$bob" | grep -e "^hours=" | cut -d = -f 2- );else SONGAGE="8";fi
+    if [[ `echo "$bob" | grep -c -e "^mode="` > 0 ]];then MODE=$(echo "$bob" | grep -e "^mode=" | cut -d = -f 2- );else MODE="SIMPLE";fi
 
     # Only need to do this at the beginning of the run
     mapfile -t Genre < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre )
@@ -58,6 +64,18 @@ function rotate_songlog {
     #echo "$hightime / $difftime"
     cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 < hightime'  > "$tempfile"
     mv -f "$tempfile" "$ConfigLogFile"
+}
+
+function rotate_genrelog {
+
+    tempfile=$(mktemp)
+    currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+    difftime=$(( "$SONGAGE" * 60 * 60 ))
+    hightime=$(( "$currenttime"-"$difftime" ))
+    echo "Eliminating genre log entries older than $SONGAGE hours."
+    #echo "$hightime / $difftime"
+    cat "$GenreLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 < hightime'  > "$tempfile"
+    mv -f "$tempfile" "$GenreLogFile"
 }
 
 
@@ -106,24 +124,32 @@ function determine_genre_weights {
     TotalNumSongs=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT listall | wc -l)
     for ((i = 0; i < ${#Genre[@]}; i++));do
         #determine weight of genre in music directory
+        if [[ "${mode}" =~ "song" ]];then
+            GenreNumSongs[$i]=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT find genre "${Genre[$i]}" | wc -l)
         
-        GenreNumSongs[$i]=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT find genre "${Genre[$i]}" | wc -l)
-        
-        GenreSongWeight[$i]=$(printf "%.0f\n" `echo "(${GenreNumSongs[$i]} / $TotalNumSongs)*1000" | bc -l`)
-        #echo "${Genre[$i]} $TotalNumSongs ${GenreNumSongs[$i]} ${GenreSongWeight[$i]}"
-        if [ ${GenreSongWeight[$i]} = 0 ];then
-            GenreSongWeight[$i]=1
-        fi
-        
-        for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
-            if [[ "${Genre[$i]}" =~ "${ModGenre[$i2]}" ]];then 
-                GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${ModValue[$i2]}" | bc -l`) 
-                #GenreWeight[$i]=$(echo "${ModValue[$i2]}")
-                break
-            else
-                GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${DefaultWeight}" | bc -l`) 
+            GenreSongWeight[$i]=$(printf "%.0f\n" `echo "(${GenreNumSongs[$i]} / $TotalNumSongs)*1000" | bc -l`)
+            if [ ${GenreSongWeight[$i]} = 0 ];then
+                GenreSongWeight[$i]=1
             fi
-        done
+        
+            for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
+                if [[ "${Genre[$i]}" =~ "${ModGenre[$i2]}" ]];then 
+                    GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${ModValue[$i2]}" | bc -l`) 
+                    #GenreWeight[$i]=$(echo "${ModValue[$i2]}")
+                    break
+                else
+                    GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${DefaultWeight}" | bc -l`) 
+                fi
+            done
+        else    # regular weighting without number of songs
+            for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
+                if [[ "${Genre[$i]}" =~ "${ModGenre[$i2]}" ]];then 
+                    GenreWeight[$i]=$(echo "${ModValue[$i2]}")
+                else
+                    GenreWeight[$i]=$(echo "${DefaultWeight}")
+                fi
+            done
+        fi
         echo "${Genre[$i]} - ${GenreWeight[$i]}"
     done
 
@@ -146,11 +172,37 @@ function choose_next_song {
        
     #Take the already weighted array and choose a random element  
 
-    ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
+    # Doing Genre played time check
+    
+    if [[ "${mode}" =~ "genre" ]];then
+        OkayGenre=""
+        while [ -z ${OkayGenre} ];do 
+            ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
+            UsedGenre=$(grep -c "${ChosenGenre}" "${GenreLogFile}")
+            for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
+                if [[ "${ChosenGenre}" =~ "${ModGenre[$i2]}" ]];then 
+                    if [ $UsedGenre -gt GenreWeight[$i] ]; then
+                        OkayGenre=""
+                    else
+                        OkayGenre="YES"
+                    fi
+                fi
+            done
+        done
+    else
+        ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
+    fi
+    # END MODE = GENREHOUR
+
+    nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+    echo "$nowtime@@@${ChosenGenre}" >> "$GenreLogFile"
     echo "Choosing song from $ChosenGenre..."    
+
     SongStem=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT search genre "$ChosenGenre" | shuf -n1)
     SongFile="$MPDBASE/$SongStem"
     #check against the previously played songs
+
+
     if cat "$ConfigLogFile" | grep -qF "$SongFile"; then
         echo "Song recently used; kicking back"
         SongFileToAdd=""
@@ -185,6 +237,7 @@ function need_next_song {
 function main {
     
     rotate_songlog
+    rotate_genrelog
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume on
     #commented because otherwise it restarts with every load...
     #mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet play
@@ -220,6 +273,7 @@ function main {
         # Has it been an hour?
         if [[ $RunningLogRotateTime -lt $TimerTime ]];then
             rotate_songlog
+            rotate_genrelog
             RunningLogRotateTime=$ctime
         fi
     done
