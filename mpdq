@@ -178,11 +178,9 @@ function choose_next_song {
         while [ -z ${OkayGenre} ] && [ ${counter} -lt ${NUMGENRES} ] ;do 
             counter=$((counter+1))
             ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
-            echo "${ChosenGenre}" 
             UsedGenre=$(grep -c "${ChosenGenre}" "${GenreLogFile}")
             for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
                 if [[ "${ChosenGenre}" = "${ModGenre[$i2]}" ]];then 
-                    echo "$ChosenGenre ${ModGenre[$i2]}"
                     if [ ${UsedGenre} -gt ${GenreWeight[$i2]} ]; then
                         echo "${ChosenGenre} already used up this hour, moving on"
                         OkayGenre=""
