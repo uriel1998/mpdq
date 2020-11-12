@@ -63,7 +63,7 @@ function rotate_songlog {
     hightime=$(( "$currenttime"-"$difftime" ))
     echo "Eliminating song log entries older than $SONGAGE hours."
     #echo "$hightime / $difftime"
-    cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 < hightime'  > "$tempfile"
+    cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
     mv -f "$tempfile" "$ConfigLogFile"
 }
 
@@ -75,7 +75,7 @@ function rotate_genrelog {
     hightime=$(( "$currenttime"-"$difftime" ))
     echo "Eliminating genre log entries older than $SONGAGE hours."
     #echo "$hightime / $difftime"
-    cat "$GenreLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 < hightime'  > "$tempfile"
+    cat "$GenreLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
     mv -f "$tempfile" "$GenreLogFile"
 }
 
@@ -178,7 +178,7 @@ function choose_next_song {
         while [ -z ${OkayGenre} ] && [ ${counter} -lt ${NUMGENRES} ] ;do 
             counter=$((counter+1))
             ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
-            UsedGenre=$(grep -c "${ChosenGenre}" "${GenreLogFile}")
+            UsedGenre=$(grep -c "@@@${ChosenGenre}" "${GenreLogFile}")
             for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
                 if [[ "${ChosenGenre}" = "${ModGenre[$i2]}" ]];then 
                     if [ ${UsedGenre} -gt ${GenreWeight[$i2]} ]; then
@@ -325,6 +325,8 @@ function already_running {
 ########################################################################
 init_config
 read_variables
+rotate_songlog
+rotate_genrelog
 
 while [ $# -gt 0 ]; do
 option="$1"
