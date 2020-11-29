@@ -67,9 +67,12 @@ mpdpass=mpd_password
 queuesize=10
 hours=8
 mode=simple  
+songlength=15
 ```
 
-The last two manage the size of queue that `mpdq` maintains and how many hours 
+`songlength` puts a cap on the duration of any chosen song to that many minutes.
+
+`hours` and `mode` manage the size of queue that `mpdq` maintains and how many hours 
 after playing a song that `mpdq` will *not* play it again.  Defaults are:
 
 ```
@@ -80,6 +83,7 @@ localhost
 10
 8
 simple  
+15
 ```
 
 See below under [Setup](#5-setup) for the difference in "modes".
