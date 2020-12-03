@@ -49,7 +49,8 @@ function read_variables() {
     if [[ `echo "$bob" | grep -c -e "^queuesize="` > 0 ]];then PLAYLIST_TRIGGER=$(echo "$bob" | grep -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
     if [[ `echo "$bob" | grep -c -e "^hours="` > 0 ]];then SONGAGE=$(echo "$bob" | grep -e "^hours=" | cut -d = -f 2- );else SONGAGE="8";fi
     if [[ `echo "$bob" | grep -c -e "^mode="` > 0 ]];then MODE=$(echo "$bob" | grep -e "^mode=" | cut -d = -f 2- );else MODE="simple";fi
-    if [[ `echo "$bob" | grep -c -e "^songlength="` > 0 ]];then SONGLENGTH=$(echo "$bob" | grep -e "^songlength=" | cut -d = -f 2- );else MODE="simple";fi
+    if [[ `echo "$bob" | grep -c -e "^songlength="` > 0 ]];then SONGLENGTH=$(echo "$bob" | grep -e "^songlength=" | cut -d = -f 2- );else SONGLENGTH="15";fi
+    if [[ `echo "$bob" | grep -c -e "^artisttime="` > 0 ]];then ARTISTTIME=$(echo "$bob" | grep -e "^songlength=" | cut -d = -f 2- );else ARTISTTIME="simple";fi
     # Only need to do this at the beginning of the run
     mapfile -t Genre < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre )
     NUMGENRES=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre | wc -l)
@@ -208,18 +209,26 @@ function choose_next_song {
         echo "Song too long; kicking back"
         SongFileToAdd=""
     else
-        #check against the previously played bands
-        #ffprobe again for artist, check against the max
+        #https://stackoverflow.com/questions/19801358/printing-lines-which-have-a-field-number-greater-than-in-awk
+        partist=$(ffprobe "${SongFile}" 2>&1 | | grep -w -E "artist\s+" | awk -F ':' '{print $3}')
+        threshold=$(expr $(TZ=UTC0 printf '%(%s)T\n' '-1') - $( expr ${ARTISTTIME} * 60))
         
-        #check against the previously played songs
-        if cat "$ConfigLogFile" | grep -qF "$SongFile"; then
-            echo "Song recently used; kicking back"
+        matchvar=$(awk -v threshold="$threshold" '$1 > threshold {print $2}' -F '@@@' ${GenreLogFile} | sed 's@${MPDBASE}/@@g' | awk -F '/' '{print tolower($1)}')
+        
+        if [[ "$matchvar" == *"partist"* ]];then
+            echo "Artist already used in time period; kicking back"
             SongFileToAdd=""
         else
-            SongFileToAdd="$SongFile"
-            #mark that we used it.
-            nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-            echo "$nowtime@@@$SongFileToAdd" >> "$ConfigLogFile"
+                
+            if cat "$ConfigLogFile" | grep -qF "$SongFile"; then
+                echo "Song recently used; kicking back"
+                SongFileToAdd=""
+            else
+                SongFileToAdd="$SongFile"
+                #mark that we used it.
+                nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+                echo "$nowtime@@@$SongFileToAdd" >> "$ConfigLogFile"
+            fi
         fi
     fi
 }

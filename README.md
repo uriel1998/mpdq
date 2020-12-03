@@ -68,9 +68,12 @@ queuesize=10
 hours=8
 mode=simple  
 songlength=15
+artisttime=30
 ```
 
 `songlength` puts a cap on the duration of any chosen song to that many minutes.
+
+`artisttime` is the minimum time between tracks from the same artist.
 
 `hours` and `mode` manage the size of queue that `mpdq` maintains and how many hours 
 after playing a song that `mpdq` will *not* play it again.  Defaults are:
@@ -84,6 +87,7 @@ localhost
 8
 simple  
 15
+30
 ```
 
 See below under [Setup](#5-setup) for the difference in "modes".
