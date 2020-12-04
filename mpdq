@@ -58,26 +58,35 @@ function read_variables() {
 
 function rotate_songlog {
 
-    tempfile=$(mktemp)
-    currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-    difftime=$(( "$SONGAGE" * 60 * 60 ))
-    hightime=$(( "$currenttime"-"$difftime" ))
-    echo "Eliminating song log entries older than $SONGAGE hours."
-    #echo "$hightime / $difftime"
-    cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
-    mv -f "$tempfile" "$ConfigLogFile"
+    if [ -f "$ConfigLogFile" ];then
+        tempfile=$(mktemp)
+        currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+        difftime=$(( "$SONGAGE" * 60 * 60 ))
+        hightime=$(( "$currenttime"-"$difftime" ))
+        echo "Eliminating song log entries older than $SONGAGE hours."
+        #echo "$hightime / $difftime"
+        cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
+        mv -f "$tempfile" "$ConfigLogFile"
+    else
+        touch "$ConfigLogFile"
+    fi
 }
 
 function rotate_genrelog {
 
-    tempfile=$(mktemp)
-    currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-    difftime=$(( "$SONGAGE" * 60 * 60 ))
-    hightime=$(( "$currenttime"-"$difftime" ))
-    echo "Eliminating genre log entries older than $SONGAGE hours."
-    #echo "$hightime / $difftime"
-    cat "$GenreLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
-    mv -f "$tempfile" "$GenreLogFile"
+    if [ -f "$GenreLogFile" ];then
+        tempfile=$(mktemp)
+        currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+        difftime=$(( "$SONGAGE" * 60 * 60 ))
+        hightime=$(( "$currenttime"-"$difftime" ))
+        echo "Eliminating genre log entries older than $SONGAGE hours."
+        #echo "$hightime / $difftime"
+        cat "$GenreLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
+        mv -f "$tempfile" "$GenreLogFile"
+    else
+        touch "$GenreLogFile"
+    fi
+    
 }
 
 
@@ -155,8 +164,7 @@ function determine_genre_weights {
 
     #populating the "weighted" array   
     for (( i = 0; i < ${#Genre[@]}; i++));do
-        #echo "${Genre[$i]}"
-        if [[ -v "${GenreWeight[$i]}" ]];then
+        if [[ ! -z "${GenreWeight[$i]}" ]];then
             for (( i2 = 1; "$i2" <= "${GenreWeight[$i]}"; i2++ ));do 
                 if [ "${GenreWeight[$i]}" != "0" ]; then
                     ChooseGenre+=("${Genre[$i]}")  
