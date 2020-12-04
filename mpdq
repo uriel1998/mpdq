@@ -210,11 +210,11 @@ function choose_next_song {
         SongFileToAdd=""
     else
         #https://stackoverflow.com/questions/19801358/printing-lines-which-have-a-field-number-greater-than-in-awk
-        partist=$(ffprobe "${SongFile}" 2>&1 | | grep -w -E "artist\s+" | awk -F ':' '{print $3}')
-        threshold=$(expr $(TZ=UTC0 printf '%(%s)T\n' '-1') - $( expr ${ARTISTTIME} * 60))
-        
-        matchvar=$(awk -v threshold="$threshold" '$1 > threshold {print $2}' -F '@@@' ${GenreLogFile} | sed 's@${MPDBASE}/@@g' | awk -F '/' '{print tolower($1)}')
-        
+        partist=$(ffprobe "$SongFile" 2>&1 |  grep -w -E "artist\s+" | awk -F ':' '{print $2}' | awk '{print tolower($0)}' | detox --inline)
+        nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+        partisttime=$(printf "%.0f\n" `echo "${ARTISTTIME} * 60" | bc -l`) 
+        threshold=$(printf "%.0f\n" `echo "${nowtime} - ${partisttime}" | bc -l`) 
+        matchvar=$(awk -F '@@@' -v threshold="$threshold" '$1 > threshold {print $2}' ${ConfigLogFile} | sed -e 's/[]$.*[\^]/\\&/g' | sed "s@${MPDBASE}@@g" | awk -F '//' '{print tolower($1)}' | detox --inline)
         if [[ "$matchvar" == *"partist"* ]];then
             echo "Artist already used in time period; kicking back"
             SongFileToAdd=""

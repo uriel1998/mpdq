@@ -51,6 +51,7 @@ linux-like distros:
 * [bash](https://www.gnu.org/software/bash/)  
 * [wc](https://www.computerhope.com/unix/uwc.htm)
 * [bc](https://www.geeksforgeeks.org/bc-command-linux-examples/)
+* [detox]
 
 ## 4. Installation
 
