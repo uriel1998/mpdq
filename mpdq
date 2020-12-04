@@ -156,13 +156,15 @@ function determine_genre_weights {
     #populating the "weighted" array   
     for (( i = 0; i < ${#Genre[@]}; i++));do
         #echo "${Genre[$i]}"
-        for (( i2 = 1; i2 <= "${GenreWeight[$i]}"; i2++ ));do 
-            if [ "${GenreWeight[$i]}" != "0" ]; then
-                ChooseGenre+=("${Genre[$i]}")  
-            fi
-            
-            #add the name GenreWeight times... giving us a sloppy weighting mechanism (and if it's zero, it SHOULD exit before hitting this)
-        done
+        if [[ -v "${GenreWeight[$i]}" ]];then
+            for (( i2 = 1; "$i2" <= "${GenreWeight[$i]}"; i2++ ));do 
+                if [ "${GenreWeight[$i]}" != "0" ]; then
+                    ChooseGenre+=("${Genre[$i]}")  
+                fi
+                
+                #add the name GenreWeight times... giving us a sloppy weighting mechanism (and if it's zero, it SHOULD exit before hitting this)
+            done
+        fi
     done
 
 }
