@@ -128,6 +128,12 @@ Gothic=1
 
 **Capitalization Matters Here**
 
+**Order Matters Here**
+
+While you can leave a genre out and have it assigned the "default" value, putting 
+them out of alphabetical order will cause problems. 
+
+
 `mpdq` can also create an example instruction file with *all* genres listed so 
 that you can check your genre names properly.  It won't *hurt* to have all the 
 genres listed, but it is totally unneeded.
@@ -246,3 +252,4 @@ utility to achive the same end, have cron call this script at a regular interval
 
 * reinstate bpm option
 * switch instruction file without ending process (perhaps part of the idle loop?)
+* lyrics/explicit checker
