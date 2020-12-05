@@ -105,11 +105,6 @@ function read_instructions() {
             rm "$tmp2"
         fi
     
-    # Fix unalphabetical instruction files
-    # Find default value
-    # use `sort` command for all other values to get in alphabetical order
-    # Also add in check for album AND artist...
-    
         while IFS= read -r line; do
             IGenre=$(echo "$line" | cut -d = -f 1) 
             IWeight=$(echo "$line" | cut -d = -f 2-) 
@@ -171,14 +166,13 @@ function determine_genre_weights {
     done
 
     #populating the "weighted" array   
+    #add the name GenreWeight times... giving us a sloppy weighting mechanism (and if it's zero, it SHOULD exit before hitting this)
     for (( i = 0; i < ${#Genre[@]}; i++));do
         if [[ ! -z "${GenreWeight[$i]}" ]];then
             for (( i2 = 1; "$i2" <= "${GenreWeight[$i]}"; i2++ ));do 
                 if [ "${GenreWeight[$i]}" != "0" ]; then
                     ChooseGenre+=("${Genre[$i]}")  
                 fi
-                
-                #add the name GenreWeight times... giving us a sloppy weighting mechanism (and if it's zero, it SHOULD exit before hitting this)
             done
         fi
     done
@@ -261,10 +255,6 @@ function need_next_song {
         choose_next_song
     done  
     
-    #Not sure which format I should use - backticks or eval. Herm.
-    
-    #Command=$(printf "mpc --host %s@%s --port %s add \"%s\"" "$MPD_PASS" "$MPD_HOST" "$MPD_PORT" "$SongFileToAdd")
-    #eval "$Command"
     SongFileToAdd=${SongFileToAdd#$MPDBASE/}
 
     `mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT add "$SongFileToAdd"`
@@ -308,12 +298,9 @@ function main {
         fi
         ctime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
         Timertime=$(( ctime-3600 ))
-        echo "Checking the time..."
-        echo "$RunningLogRotateTime and $Timertime"   #This isn't working the way I mean for it to?
         # Has it been an hour?
-        
+        # It *checks* every hour, but only rotates those older than $SONGAGE
         if [ $Timertime -ge $RunningLogRotateTime ];then
-            echo "## Time to rotate"
             rotate_songlog
             rotate_genrelog
             RunningLogRotateTime=$ctime
