@@ -51,7 +51,7 @@ linux-like distros:
 * [bash](https://www.gnu.org/software/bash/)  
 * [wc](https://www.computerhope.com/unix/uwc.htm)
 * [bc](https://www.geeksforgeeks.org/bc-command-linux-examples/)
-* [detox]
+* [detox](http://detox.sourceforge.net/)
 
 ## 4. Installation
 
@@ -132,7 +132,6 @@ Gothic=1
 
 While you can leave a genre out and have it assigned the "default" value, putting 
 them out of alphabetical order will cause problems. 
-
 
 `mpdq` can also create an example instruction file with *all* genres listed so 
 that you can check your genre names properly.  It won't *hurt* to have all the 
@@ -250,6 +249,7 @@ utility to achive the same end, have cron call this script at a regular interval
 
 ## 7. TODO
 
+* Fix unalphabetical instruction files in regular flow (using `sort`)
 * reinstate bpm option
 * switch instruction file without ending process (perhaps part of the idle loop?)
 * lyrics/explicit checker

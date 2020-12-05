@@ -51,6 +51,7 @@ linux-like distros:
 * [bash](https://www.gnu.org/software/bash/)  
 * [wc](https://www.computerhope.com/unix/uwc.htm)
 * [bc](https://www.geeksforgeeks.org/bc-command-linux-examples/)
+* [detox](http://detox.sourceforge.net/)
 
 ## 4. Installation
 
@@ -67,9 +68,15 @@ mpdpass=mpd_password
 queuesize=10
 hours=8
 mode=simple  
+songlength=15
+artisttime=30
 ```
 
-The last two manage the size of queue that `mpdq` maintains and how many hours 
+`songlength` puts a cap on the duration of any chosen song to that many minutes.
+
+`artisttime` is the minimum time between tracks from the same artist.
+
+`hours` and `mode` manage the size of queue that `mpdq` maintains and how many hours 
 after playing a song that `mpdq` will *not* play it again.  Defaults are:
 
 ```
@@ -80,6 +87,8 @@ localhost
 10
 8
 simple  
+15
+30
 ```
 
 See below under [Setup](#5-setup) for the difference in "modes".
@@ -118,6 +127,11 @@ Gothic=1
 ```
 
 **Capitalization Matters Here**
+
+**Order Matters Here**
+
+While you can leave a genre out and have it assigned the "default" value, putting 
+them out of alphabetical order will cause problems. 
 
 `mpdq` can also create an example instruction file with *all* genres listed so 
 that you can check your genre names properly.  It won't *hurt* to have all the 
@@ -235,5 +249,7 @@ utility to achive the same end, have cron call this script at a regular interval
 
 ## 7. TODO
 
+* Fix unalphabetical instruction files in regular flow (using `sort`)
 * reinstate bpm option
 * switch instruction file without ending process (perhaps part of the idle loop?)
+* lyrics/explicit checker
