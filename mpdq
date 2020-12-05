@@ -105,6 +105,11 @@ function read_instructions() {
             rm "$tmp2"
         fi
     
+    # Fix unalphabetical instruction files
+    # Find default value
+    # use `sort` command for all other values to get in alphabetical order
+    
+    
         while IFS= read -r line; do
             IGenre=$(echo "$line" | cut -d = -f 1) 
             IWeight=$(echo "$line" | cut -d = -f 2-) 
@@ -144,7 +149,7 @@ function determine_genre_weights {
             fi
         
             for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
-                if [[ "${Genre[$i]}" =~ "${ModGenre[$i2]}" ]];then 
+                if [[ "${Genre[$i]}" = "${ModGenre[$i2]}" ]];then 
                     GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${ModValue[$i2]}" | bc -l`) 
                     #GenreWeight[$i]=$(echo "${ModValue[$i2]}")
                     break
@@ -154,10 +159,13 @@ function determine_genre_weights {
             done
         else    # regular weighting without number of songs
             for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
-                if [[ "${Genre[$i]}" =~ "${ModGenre[$i2]}" ]];then 
+                if [[ "${Genre[$i]}" = "${ModGenre[$i2]}" ]];then 
                     GenreWeight[$i]=$(echo "${ModValue[$i2]}")
                 fi
             done
+        fi
+        if [ -z ${GenreWeight[$i]} ];then
+            GenreWeight[$i]=${DefaultWeight}
         fi
         echo "${Genre[$i]} - ${GenreWeight[$i]}"
     done
@@ -174,7 +182,6 @@ function determine_genre_weights {
             done
         fi
     done
-
 }
 
 
@@ -187,12 +194,13 @@ function choose_next_song {
         counter=0 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
         OkayGenre=""
         while [ -z ${OkayGenre} ] && [ ${counter} -lt ${NUMGENRES} ] ;do 
-            counter=$((counter+1))
             ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
-            UsedGenre=$(grep -c "@@@${ChosenGenre}" "${GenreLogFile}")
-            for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
+            UsedGenre=$(grep -c "@@@${ChosenGenre}" "${GenreLogFile}")   
+            for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do    
+            echo "${ChosenGenre}:${UsedGenre} and ${ModGenre[$i2]}:${GenreWeight[$i2]}"          
                 if [[ "${ChosenGenre}" = "${ModGenre[$i2]}" ]];then 
-                    if [ ${UsedGenre} -gt ${GenreWeight[$i2]} ]; then
+                    
+                    if [ "${UsedGenre}" -gt "${GenreWeight[$i2]}" ]; then  
                         echo "${ChosenGenre} already used up this hour, moving on"
                         OkayGenre=""
                     else
@@ -200,6 +208,7 @@ function choose_next_song {
                     fi
                 fi
             done
+            counter=$((counter+1))
         done
     else
         ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
@@ -299,11 +308,16 @@ function main {
         fi
         ctime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
         Timertime=$(( ctime-3600 ))
+        echo "Checking the time..."
+        echo "$RunningLogRotateTime and $Timertime"
         # Has it been an hour?
         if [[ $RunningLogRotateTime -lt $TimerTime ]];then
+            echo "## Time to rotate"
             rotate_songlog
             rotate_genrelog
             RunningLogRotateTime=$ctime
+        else
+            echo "No rotation yet"
         fi
     done
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume off
