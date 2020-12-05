@@ -108,7 +108,7 @@ function read_instructions() {
     # Fix unalphabetical instruction files
     # Find default value
     # use `sort` command for all other values to get in alphabetical order
-    
+    # Also add in check for album AND artist...
     
         while IFS= read -r line; do
             IGenre=$(echo "$line" | cut -d = -f 1) 
@@ -197,7 +197,7 @@ function choose_next_song {
             ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
             UsedGenre=$(grep -c "@@@${ChosenGenre}" "${GenreLogFile}")   
             for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do    
-            echo "${ChosenGenre}:${UsedGenre} and ${ModGenre[$i2]}:${GenreWeight[$i2]}"          
+            #echo "${ChosenGenre}:${UsedGenre} and ${ModGenre[$i2]}:${GenreWeight[$i2]}"          
                 if [[ "${ChosenGenre}" = "${ModGenre[$i2]}" ]];then 
                     
                     if [ "${UsedGenre}" -gt "${GenreWeight[$i2]}" ]; then  
@@ -234,7 +234,7 @@ function choose_next_song {
         partisttime=$(printf "%.0f\n" `echo "${ARTISTTIME} * 60" | bc -l`) 
         threshold=$(printf "%.0f\n" `echo "${nowtime} - ${partisttime}" | bc -l`) 
         matchvar=$(awk -F '@@@' -v threshold="$threshold" '$1 > threshold {print $2}' ${ConfigLogFile} | sed -e 's/[]$.*[\^]/\\&/g' | sed "s@${MPDBASE}@@g" | awk -F '//' '{print tolower($1)}' | detox --inline)
-        if [[ "$matchvar" == *"partist"* ]];then
+        if [[ "$matchvar" == *"$partist"* ]];then
             echo "Artist already used in time period; kicking back"
             SongFileToAdd=""
         else
@@ -309,9 +309,10 @@ function main {
         ctime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
         Timertime=$(( ctime-3600 ))
         echo "Checking the time..."
-        echo "$RunningLogRotateTime and $Timertime"
+        echo "$RunningLogRotateTime and $Timertime"   #This isn't working the way I mean for it to?
         # Has it been an hour?
-        if [[ $RunningLogRotateTime -lt $TimerTime ]];then
+        
+        if [ $Timertime -ge $RunningLogRotateTime ];then
             echo "## Time to rotate"
             rotate_songlog
             rotate_genrelog
