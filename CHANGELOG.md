@@ -1,4 +1,6 @@
-* [2020-12-05 16:59:06 CDT] - docs HEAD -> master, tag: v1.2.0, gitlab/master, github/master, github/HEAD, fc/master, triple-threat
+* [2020-12-06 00:05:44 CDT] - escaping spaces in genre matching HEAD -> master, tag: v1.2.1, gitlab/master, github/master, github/HEAD, fc/master
+* [2020-12-05 17:12:05 CDT] - changelog file
+* [2020-12-05 16:59:06 CDT] - docs tag: v1.2.0, triple-threat
 * [2020-12-05 15:06:17 CDT] - the logrotation!
 * [2020-12-04 21:04:05 CDT] - whole MESS of bugs squashed
 * [2020-12-03 20:14:34 CDT] - really got that bug this time...
