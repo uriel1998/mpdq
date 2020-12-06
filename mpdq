@@ -213,9 +213,13 @@ function choose_next_song {
     echo "$nowtime@@@${ChosenGenre}" >> "$GenreLogFile"
     echo "Choosing song from $ChosenGenre..."    
 
-    SongStem=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT search genre "$ChosenGenre" | shuf -n1)
+    evalme=$(printf "mpc --host %s@%s --port %s search genre \"%s\" | shuf -n1" "$MPD_PASS" "$MPD_HOST" "$MPD_PORT" "${ChosenGenre}")
+    SongStem=$(eval "$evalme")
+    # Changed to deal with more spaces and escaping...
+    #SongStem=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT search genre '${ChosenGenre}' | shuf -n1)
     SongFile="$MPDBASE/$SongStem"
-
+    #echo "$SongStem"
+    #echo "$SongFile"
     #check that it is not too long
     length=$(ffprobe "${SongFile}" 2>&1 | grep "Duration:" | awk -F ':' '{print $3}')
     if [ $length -gt $SONGLENGTH ];then
@@ -304,8 +308,6 @@ function main {
             rotate_songlog
             rotate_genrelog
             RunningLogRotateTime=$ctime
-        else
-            echo "No rotation yet"
         fi
     done
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume off
