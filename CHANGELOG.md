@@ -1,4 +1,6 @@
-* [2020-12-06 00:05:44 CDT] - escaping spaces in genre matching HEAD -> master, tag: v1.2.1, gitlab/master, github/master, github/HEAD, fc/master
+* [2020-12-07 14:15:41 CDT] - find instead of mpc search so it stops overmatching HEAD -> master, tag: v1.2.2, gitlab/master, github/master, github/HEAD, fc/master
+* [2020-12-06 00:08:04 CDT] - changelog
+* [2020-12-06 00:05:44 CDT] - escaping spaces in genre matching tag: v1.2.1
 * [2020-12-05 17:12:05 CDT] - changelog file
 * [2020-12-05 16:59:06 CDT] - docs tag: v1.2.0, triple-threat
 * [2020-12-05 15:06:17 CDT] - the logrotation!
