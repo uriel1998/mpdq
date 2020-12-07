@@ -189,11 +189,12 @@ function choose_next_song {
         OkayGenre=""
         while [ -z ${OkayGenre} ] && [ ${counter} -lt ${NUMGENRES} ] ;do 
             ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
+            #echo "$ChosenGenre"
             UsedGenre=$(grep -c "@@@${ChosenGenre}" "${GenreLogFile}")   
             for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do    
-            #echo "${ChosenGenre}:${UsedGenre} and ${ModGenre[$i2]}:${GenreWeight[$i2]}"          
+            
                 if [[ "${ChosenGenre}" = "${ModGenre[$i2]}" ]];then 
-                    
+                    #echo "${ChosenGenre}:${UsedGenre} and ${ModGenre[$i2]}:${GenreWeight[$i2]}"          
                     if [ "${UsedGenre}" -gt "${GenreWeight[$i2]}" ]; then  
                         echo "${ChosenGenre} already used up this hour, moving on"
                         OkayGenre=""
@@ -213,10 +214,11 @@ function choose_next_song {
     echo "$nowtime@@@${ChosenGenre}" >> "$GenreLogFile"
     echo "Choosing song from $ChosenGenre..."    
 
-    evalme=$(printf "mpc --host %s@%s --port %s search genre \"%s\" | shuf -n1" "$MPD_PASS" "$MPD_HOST" "$MPD_PORT" "${ChosenGenre}")
+    evalme=$(printf "mpc --host %s@%s --port %s find genre \"%s\" | shuf -n1" "$MPD_PASS" "$MPD_HOST" "$MPD_PORT" "$ChosenGenre")
+    #echo "$evalme"
     SongStem=$(eval "$evalme")
     # Changed to deal with more spaces and escaping...
-    #SongStem=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT search genre '${ChosenGenre}' | shuf -n1)
+    #SongStem=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT find genre '${ChosenGenre}' | shuf -n1)
     SongFile="$MPDBASE/$SongStem"
     #echo "$SongStem"
     #echo "$SongFile"
