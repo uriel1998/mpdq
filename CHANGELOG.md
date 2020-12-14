@@ -1,4 +1,6 @@
-* [2020-12-07 14:15:41 CDT] - find instead of mpc search so it stops overmatching HEAD -> master, tag: v1.2.2, gitlab/master, github/master, github/HEAD, fc/master
+* [2020-12-14 14:31:39 CDT] - independent log for songs for no repeats HEAD -> master, tag: v1.3.0
+* [2020-12-07 14:20:58 CDT] - update gitlab/master, github/master, github/HEAD, fc/master
+* [2020-12-07 14:15:41 CDT] - find instead of mpc search so it stops overmatching tag: v1.2.2
 * [2020-12-06 00:08:04 CDT] - changelog
 * [2020-12-06 00:05:44 CDT] - escaping spaces in genre matching tag: v1.2.1
 * [2020-12-05 17:12:05 CDT] - changelog file
