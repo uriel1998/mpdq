@@ -48,6 +48,7 @@ function read_variables() {
     if [[ `echo "$bob" | grep -c -e "^mpdpass="` > 0 ]];then MPD_PASS=$(echo "$bob" | grep -e "^mpdpass=" | cut -d = -f 2- );else MPD_PASS="";fi
     if [[ `echo "$bob" | grep -c -e "^queuesize="` > 0 ]];then PLAYLIST_TRIGGER=$(echo "$bob" | grep -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
     if [[ `echo "$bob" | grep -c -e "^hours="` > 0 ]];then SONGAGE=$(echo "$bob" | grep -e "^hours=" | cut -d = -f 2- );else SONGAGE="8";fi
+    if [[ `echo "$bob" | grep -c -e "^songhours="` > 0 ]];then SONGHOURS=$(echo "$bob" | grep -e "^songhours=" | cut -d = -f 2- );else SONGHOURS="8";fi
     if [[ `echo "$bob" | grep -c -e "^mode="` > 0 ]];then MODE=$(echo "$bob" | grep -e "^mode=" | cut -d = -f 2- );else MODE="simple";fi
     if [[ `echo "$bob" | grep -c -e "^songlength="` > 0 ]];then SONGLENGTH=$(echo "$bob" | grep -e "^songlength=" | cut -d = -f 2- );else SONGLENGTH="15";fi
     if [[ `echo "$bob" | grep -c -e "^artisttime="` > 0 ]];then ARTISTTIME=$(echo "$bob" | grep -e "^songlength=" | cut -d = -f 2- );else ARTISTTIME="simple";fi
@@ -61,9 +62,9 @@ function rotate_songlog {
     if [ -f "$ConfigLogFile" ];then
         tempfile=$(mktemp)
         currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-        difftime=$(( "$SONGAGE" * 60 * 60 ))
+        difftime=$(( "$SONGHOURS" * 60 * 60 ))
         hightime=$(( "$currenttime"-"$difftime" ))
-        echo "Eliminating song log entries older than $SONGAGE hours."
+        echo "Eliminating song log entries older than $SONGHOURS hours."
         #echo "$hightime / $difftime"
         cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
         mv -f "$tempfile" "$ConfigLogFile"

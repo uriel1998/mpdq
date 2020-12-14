@@ -67,6 +67,7 @@ mpdport=6600
 mpdpass=mpd_password
 queuesize=10
 hours=8
+songhours=24
 mode=simple  
 songlength=15
 artisttime=30
@@ -76,8 +77,9 @@ artisttime=30
 
 `artisttime` is the minimum time between tracks from the same artist.
 
-`hours` and `mode` manage the size of queue that `mpdq` maintains and how many hours 
-after playing a song that `mpdq` will *not* play it again.  Defaults are:
+`hours`, `songhours`, and `mode` manage the size of queue that `mpdq` maintains,
+ and how many hours after playing a song that `mpdq` will *not* play it again.  
+ See below under [Setup](#5-setup) for the difference in "modes". Defaults are:
 
 ```
 $HOME/Music
@@ -86,12 +88,13 @@ localhost
 (no password)
 10
 8
+8
 simple  
 15
 30
 ```
 
-See below under [Setup](#5-setup) for the difference in "modes".
+
 
 ## 5. Setup
 
@@ -150,11 +153,16 @@ you defined in the instruction file.
 * **songs** - this weighting factors in the number of songs you have in each genre 
 as well as the genre weight you defined in the instruction file. This will result 
 in increased representation from genres you have more songs in.
-* **genre** - this weighting uses the genre weight as *the maximum number of songs in that genre to be played per hour*. 
+* **genre** - this weighting uses the genre weight as *the maximum number of songs 
+in that genre to be played* per the time period you set with `hour` in the ini file. 
 So if you put `Pop=1`, you will *only* hear 1 song from that genre per hour. 
 If all genres are (somehow) exhausted in one hour, it will just use the randomly selected genre.
 
 If you do not have mode defined, it defaults to **simple**.
+
+`songhour` maintains a list of previously used songs for that period of time 
+(in hours). If a song has been played in that time period, it will not be played 
+again during that time period.  It is independent of the `hour` variable.
 
 ## 6. Usage
 
