@@ -295,6 +295,10 @@ function main {
 
         #If MPD is not set to repeat: off, random: off, and consume: on, just wait for the next idle loop
         pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | awk -F ' ' '{print $4 $6 $10}')
+        # I do not know why MPC sometimes returns this. 
+        if [[ "$pauseme" == *":"* ]]; then
+            pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | awk -F ' ' '{print $3 $5 $9}')
+        fi
         if [ "$pauseme" == "offoffon" ];then
             playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
             if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
