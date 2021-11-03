@@ -1,35 +1,67 @@
 <!doctype html>
-<html lang="{{ site.lang | default: "en-US" }}">
+<html lang="en-US">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-{% seo %}
-    <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>MPDQ | Automatic MPD smart playlist creator with minimal but hackable setup.</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="mpdq" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Automatic MPD smart playlist creator with minimal but hackable setup." />
+<meta property="og:description" content="Automatic MPD smart playlist creator with minimal but hackable setup." />
+<link rel="canonical" href="https://uriel1998.github.io/mpdq/" />
+<meta property="og:url" content="https://uriel1998.github.io/mpdq/" />
+<meta property="og:site_name" content="mpdq" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="mpdq" />
+<script type="application/ld+json">
+{"headline":"ddwrt-who-is-connected","description":"Automatic MPD smart playlist creator with minimal but hackable setup.","url":"https://uriel1998.github.io/mpdq/","@type":"WebSite","name":"mpdq","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/mpdq/assets/css/style.css?v=2c11205dcc63f66ebbd85f64d88cd2069c67b92a">
     <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
-    <script src="{{ '/assets/js/respond.js' | relative_url }}"></script>
+    <script src="/ddwrt-who-is-connected/assets/js/respond.js"></script>
     <!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
     <!--[if lt IE 8]>
-    <link rel="stylesheet" href="{{ '/assets/css/ie.css' | relative_url }}">
+    <link rel="stylesheet" href="/ddwrt-who-is-connected/assets/css/ie.css">
     <![endif]-->
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#353535">
+<meta name="msapplication-navbutton-color" content="#353535">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/ddwrt-who-is-connected/favicon.ico" -->
+
+<!-- end custom head snippets -->
 
   </head>
   <body>
       <div id="header">
-        <nav style="margin: 0 auto;">
-          <li class="fork" style="margin-left: 5px !important;margin-right: 5px !important;"><a href="{{ site.github.repository_url }}" target="_blank">View On GitHub</a></li>
-          <li class="fork" style="margin-left: 5px !important;margin-right: 5px !important;"><a href="https://gitlab.com/uriel1998/{{ site.github.repository_name }}" target="_blank">View On GitLab</a></li>
-          <li class="fork" style="margin-left: 5px !important;margin-right: 5px !important;"><a href="https://git.faithcollapsing.com/{{ site.github.repository_name }}" target="_blank">View On My Git</a></li>
-          {% if site.show_downloads %}
-            <li class="downloads"><a href="{{ site.github.zip_url }}">ZIP</a></li>
-            <li class="downloads"><a href="{{ site.github.tar_url }}">TAR</a></li>
-            <li class="title">DOWNLOADS</li>
-          {% endif %}
+        <nav>
+          <ul>
+            <li class="fork"><a href="https://github.com/uriel1998/mpdq">View On GitHub</a></li>
+            <li class="fork" style="margin-left: 5px !important;margin-right: 5px !important;"><a href="https://gitlab.com/uriel1998/{{ site.github.repository_name }}" target="_blank">View On GitLab</a></li>
+            <li class="fork" style="margin-left: 5px !important;margin-right: 5px !important;"><a href="https://git.faithcollapsing.com/{{ site.github.repository_name }}" target="_blank">View On My Git</a></li>            
+            
+          </ul>
         </nav>
       </div><!-- end header -->
+
     <div class="wrapper">
       <section>
         <div id="title">
