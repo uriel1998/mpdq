@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 ########################################################################
 # Definitions
@@ -126,7 +126,6 @@ function read_instructions() {
 
 
 function determine_genre_weights {
-
     #This is not light, but it's only done once a run.
     #loop through genre, if not in array ModGenre, then apply DefaultWeight
 
@@ -393,14 +392,13 @@ option="$1"
     esac
     
 done
-    read_instructions
-    determine_genre_weights
-    #Will not be echoed if killing process, as killing exits the program first
 
-            echo "$$" >> /tmp/mpdq.pid
-                
-                
-            trap killing EXIT
+read_instructions
+determine_genre_weights
+#Will not be echoed if killing process, as killing exits the program first
 
-            main
-            ;;
+echo "$$" >> /tmp/mpdq.pid
+
+trap killing EXIT
+
+main
