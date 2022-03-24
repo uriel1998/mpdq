@@ -53,6 +53,14 @@ linux-like distros:
 * [bc](https://www.geeksforgeeks.org/bc-command-linux-examples/)
 * [detox](http://detox.sourceforge.net/)
 
+ONE or MORE of the following for artist and song information on your `$PATH`:
+
+* [mp3info](https://www.ibiblio.org/mp3info/)
+* [exiftool](https://www.exiftool.org/)
+* [ffmpeg](https://ffmpeg.org/)
+
+`mpdq` will attempt to use them automatically in the order listed.
+
 ## 4. Installation
 
 * Create $HOME/.config/mpdq

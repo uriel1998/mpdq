@@ -224,13 +224,34 @@ function choose_next_song {
     #echo "$SongStem"
     #echo "$SongFile"
     #check that it is not too long
-    length=$(ffprobe "${SongFile}" 2>&1 | grep "Duration:" | awk -F ':' '{print $3}')
+    length=""
+    length=$(mp3info -p "%S" "${SongFile}")
+    if [ -z $length ];then
+        length=$(exiftool "${SongFile}" | grep "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
+        if [ -z $length ];then
+            length=$(ffprobe "${SongFile}" 2>&1 | grep "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
+        else
+            echo "No song duration found. Do we have ffmpeg, exiftool, or mp3info?"
+            length="0"
+        fi
+    fi
+    
     if [ $length -gt $SONGLENGTH ];then
         echo "Song too long; kicking back"
         SongFileToAdd=""
     else
         #https://stackoverflow.com/questions/19801358/printing-lines-which-have-a-field-number-greater-than-in-awk
-        partist=$(ffprobe "$SongFile" 2>&1 |  grep -w -E "artist\s+" | awk -F ':' '{print $2}' | awk '{print tolower($0)}' | detox --inline)
+        partist=""
+        partist=$(mp3info "$SongFile" 2>&1 |  grep -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
+        if [ -z $partist ];then
+            partist=$(exiftool "$SongFile" 2>&1 |  grep -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
+            if [ -z $partist ];then
+                partist=$(ffprobe "$SongFile" 2>&1 |  grep -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
+            else
+                echo "Cannot get artist information. Do we have ffmpeg, mp3info, or exiftool?"
+                partist="mpdq_unknown"
+            fi
+        fi
         nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
         partisttime=$(printf "%.0f\n" `echo "${ARTISTTIME} * 60" | bc -l`) 
         threshold=$(printf "%.0f\n" `echo "${nowtime} - ${partisttime}" | bc -l`) 
@@ -294,12 +315,8 @@ function main {
         fi
 
         #If MPD is not set to repeat: off, random: off, and consume: on, just wait for the next idle loop
-        pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | awk -F ' ' '{print $4 $6 $10}')
-        # I do not know why MPC sometimes returns this. 
-        if [[ "$pauseme" == *":"* ]]; then
-            pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | awk -F ' ' '{print $3 $5 $9}')
-        fi
-        if [ "$pauseme" == "offoffon" ];then
+        pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | grep "repeat: off" | grep "consume: on" | grep -c "random: off")
+        if [ "$pauseme" == "1" ];then
             playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
             if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
                 need_next_song
