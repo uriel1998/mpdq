@@ -225,31 +225,36 @@ function choose_next_song {
     #echo "$SongFile"
     #check that it is not too long
     length=""
-    length=$(mp3info -p "%S" "${SongFile}")
+    length=$(mp3info -p "%S" "${SongFile}" 2>/dev/null)
+    
     if [ -z $length ];then
         length=$(exiftool "${SongFile}" | grep "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
         if [ -z $length ];then
             length=$(ffprobe "${SongFile}" 2>&1 | grep "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
-        else
-            echo "No song duration found. Do we have ffmpeg, exiftool, or mp3info?"
-            length="0"
+            if [ -z $length ];then
+                echo "No song duration found. Do we have ffmpeg, exiftool, or mp3info?"
+                length="0"
+            fi
         fi
+    else
+        #mp3info returns it in seconds
+        length=$(printf "%.0f\n" `echo "${length} / 60" | bc -l`) 
     fi
-    
     if [ $length -gt $SONGLENGTH ];then
         echo "Song too long; kicking back"
         SongFileToAdd=""
     else
         #https://stackoverflow.com/questions/19801358/printing-lines-which-have-a-field-number-greater-than-in-awk
         partist=""
-        partist=$(mp3info "$SongFile" 2>&1 |  grep -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
-        if [ -z $partist ];then
-            partist=$(exiftool "$SongFile" 2>&1 |  grep -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
-            if [ -z $partist ];then
-                partist=$(ffprobe "$SongFile" 2>&1 |  grep -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
-            else
-                echo "Cannot get artist information. Do we have ffmpeg, mp3info, or exiftool?"
-                partist="mpdq_unknown"
+        partist=$(mp3info "$SongFile" 2>/dev/null |  grep -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
+        if [ -z "$partist" ];then
+            partist=$(exiftool "$SongFile" 2>/dev/null |  grep -w -i -E "artist\s+" | awk -F ':' '{print tolower($2)}' | detox --inline)
+            if [ -z "$partist" ];then
+                partist=$(ffprobe "$SongFile" 2>&1 |  grep -w -i -E "artist\s+"  | awk -F ':' '{print tolower($2)}' | detox --inline)
+                if [ -z "$partist" ];then
+                    echo "Cannot get artist information. Do we have ffmpeg, mp3info, or exiftool?"
+                    partist="mpdq_unknown"
+                fi
             fi
         fi
         nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
