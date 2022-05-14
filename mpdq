@@ -57,14 +57,14 @@ function read_variables() {
     if [[ `echo "$bob" | grep -c -e "^musicinfo="` > 0 ]];then 
         MUSICINFO=$(echo "$bob" | grep -e "^musicinfo=" | cut -d = -f 2- )
     else 
-        if [ -f $(which mp3info) ];then
-            MUSICINFO=mp3info
+        if [ -f $(which ffprobe) ];then
+            MUSICINFO=ffprobe
         else
-            if [ -f $(which ffprobe) ];then
-                MUSICINFO=ffprobe
+            if [ -f $(which exiftool) ];then
+                MUSICINFO=exiftool
             else
-                if [ -f $(which exiftool) ];then
-                    MUSICINFO=exiftool
+                if [ -f $(which mp3info) ];then
+                    MUSICINFO=mp3info
                 else
                     MUSICINFO=""
                 fi
@@ -273,6 +273,7 @@ function choose_next_song {
         partist=""
         case ${MUSICINFO} in
             *mp3info) 
+                ${MUSICINFO} "$SongFile"
                 partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  grep -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
                 ;;
             *exiftool)
@@ -283,8 +284,8 @@ function choose_next_song {
                 ;;
         esac
 
-
-        if [ -z "$partist" ];then
+        echo "${partist} ${MUSICINFO}"
+        if [ -z "${partist}" ];then
             echo "Cannot get artist information. Do we have ffmpeg, mp3info, or exiftool?"
             partist="mpdq_unknown"
         fi
