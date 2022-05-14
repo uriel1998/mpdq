@@ -259,11 +259,10 @@ function choose_next_song {
             length=$(${MUSICINFO} "${SongFile}" 2>&1 | grep "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
             ;;
     esac
-            if [ -z $length ];then
-                echo "No song duration found. Do we have ffmpeg, exiftool, or mp3info?"
-                length="0"
-            fi
-        fi
+    if [ -z $length ];then
+        echo "No song duration found. Do we have ffmpeg, exiftool, or mp3info?"
+        length="0"
+    fi
     if [ $length -gt $SONGLENGTH ];then
         echo "Song too long; kicking back"
         SongFileToAdd=""
