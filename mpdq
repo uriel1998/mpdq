@@ -284,13 +284,14 @@ function choose_next_song {
                 ;;
         esac
 
-        echo "${partist} ${MUSICINFO}"
+        # echo "${partist} ${MUSICINFO}"
         if [ -z "${partist}" ];then
             echo "Cannot get artist information. Do we have ffmpeg, mp3info, or exiftool?"
             partist="mpdq_unknown"
         fi
 
 
+        ### This needs to be changed to handle a different file structure.
         nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
         partisttime=$(printf "%.0f\n" `echo "${ARTISTTIME} * 60" | bc -l`) 
         threshold=$(printf "%.0f\n" `echo "${nowtime} - ${partisttime}" | bc -l`) 
