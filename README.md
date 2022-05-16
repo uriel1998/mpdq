@@ -79,11 +79,19 @@ songhours=24
 mode=simple  
 songlength=15
 artisttime=30
+musicinfo=ffprobe
 ```
 
 `songlength` puts a cap on the duration of any chosen song to that many minutes.
 
 `artisttime` is the minimum time between tracks from the same artist.
+
+`musicinfo` denotes the helper program that gets additional music information (like 
+duration) from the MP3. If not specified, `mpdq` searches along $PATH for (in this 
+order) `ffprobe`, `exifinfo`, and `mp3info`. If your helper program is in your $PATH,
+you can just put the binary name, otherwise put the full path to the program. 
+
+** IF YOU USE ANY HELPER PROGRAM BESIDES THESE THREE, YOU WILL HAVE TO EDIT THE PROGRAM ** 
 
 `hours`, `songhours`, and `mode` manage the size of queue that `mpdq` maintains,
  and how many hours after playing a song that `mpdq` will *not* play it again.  
@@ -100,6 +108,7 @@ localhost
 simple  
 15
 30
+ffprobe
 ```
 
 
