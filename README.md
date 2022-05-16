@@ -1,7 +1,8 @@
 # mpdq
 
-Automatic MPD playlist or party mode creator to provide complexity and 
-randomness while autoqueuing MPD without relying on external services.
+Automatic MPD playlist or party mode creator to provide
+weighted randomness while autoqueuing MPD 
+without relying on external services.
 
 ![mpdq logo](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq-open-graph.png "logo")
 
@@ -24,12 +25,14 @@ randomness while autoqueuing MPD without relying on external services.
 `mpdq` is a auto-queing system for MPD to create a flexible and configurable 
 "party mode" effect with randomization and (re)discovery of your own music. 
 Inspired by the eclectic soundtracks of *Letterkenny*, *High Fidelity*, 
-*Doom Patrol*, and many more.  (More explanation for *why* is at [my blog](https://ideatrash.net/?p=121759).  
+*Doom Patrol*, and many more.
+(In-depth explanation at [my blog](https://ideatrash.net/?p=121759)).
 
-`mpdq` will autoqueue random tracks from your existing music library, with 
-(very) configurable weighting by genre and simple defaults.  
+`mpdq` will autoqueue random tracks from your existing music library,
+with per-genre weighting and simple defaults.  
 
-Because it uses `mpd`'s own data, new tracks and changes to your music library 
+Because it uses `mpd`'s own data, 
+new tracks and changes to your music library 
 will be incorporated when `mpd` is updated.
 
 If you are looking for the older, heaver, and BPM-using version of `mpdq`, 
@@ -63,8 +66,7 @@ ONE or MORE of the following for artist and song information on your `$PATH`:
 
 ## 4. Installation
 
-* Create $HOME/.config/mpdq
-* Place mpdq.ini in $HOME/.config/mpdq
+Place mpdq.ini in $XDG_CONFIG_HOME/mpdq
 
 This file (example provided) contains only the following lines:
 
@@ -110,8 +112,6 @@ simple
 30
 ffprobe
 ```
-
-
 
 ## 5. Setup
 
@@ -190,7 +190,7 @@ again during that time period.  It is independent of the `hour` variable.
 * -c : Which instruction file to use
 * -d : Override the default priority in the instruction file
 * -k : Kill a currently running `mpdq` process.
-* -e : Create an example instruction file at $HOME/.config/mpdq/example_instruction.
+* -e : Create an example instruction file at $XDG_STATE_HOME/mpdq/example_instruction.
 * -h : Show a short help message.
 
 `mpdq` will automatically pause if MPD is *not* set to:

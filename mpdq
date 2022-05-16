@@ -4,10 +4,11 @@
 # Definitions
 ########################################################################
 
-ConfigDir=$HOME/.config/mpdq
-ConfigFile=$HOME/.config/mpdq/mpdq.ini
-ConfigLogFile=$HOME/.config/mpdq/playedsongs.log
-GenreLogFile=$HOME/.config/mpdq/playedgenres.log
+ConfigDir=${XDG_CONFIG_HOME:-$HOME/.config}/mpdq
+ConfigFile=$ConfigDir/mpdq.ini
+StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
+ConfigLogFile=$XDG_STATE_HOME/playedsongs.log
+GenreLogFile=$XDG_STATE_HOME/playedgenres.log
 RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
 SCRIPT=$0
 InstructionFile=""
@@ -16,7 +17,7 @@ tmp2=$(mktemp)
 
 ModGenre=()
 ModValue=()
-GenreWeight=()    
+GenreWeight=()
 ChooseGenre=()
 SONGLENGTH=10
 
@@ -26,24 +27,22 @@ SONGLENGTH=10
 
 
 function init_config() {
-
     if [ -f "$GenreLogFile" ];then
         touch "$GenreLogFile"
-    fi    
+    fi
     
     if [ -f "$ConfigLogFile" ];then
         touch "$ConfigLogFile"
-    fi    
+    fi
 }
 
 function read_variables() {
-
     if [ -f "$ConfigFile" ];then
-        bob=$(cat "$ConfigFile") 
+        bob=$(cat "$ConfigFile")
     fi
     # If there's no config file or a line is malformed or missing, sub in the default value
     if [[ `echo "$bob" | grep -c -e "^musicdir="` > 0 ]];then MPDBASE=$(echo "$bob" | grep -e "^musicdir=" | cut -d = -f 2- );else MPDBASE="$HOME/Music";fi
-    if [[ `echo "$bob" | grep -c -e "^mpdserver="` > 0 ]];then MPD_HOST=$(echo "$bob" | grep -e "^mpdserver=" | cut -d = -f 2- );else MPD_HOST="localhost";fi    
+    if [[ `echo "$bob" | grep -c -e "^mpdserver="` > 0 ]];then MPD_HOST=$(echo "$bob" | grep -e "^mpdserver=" | cut -d = -f 2- );else MPD_HOST="localhost";fi
     if [[ `echo "$bob" | grep -c -e "^mpdport="` > 0 ]];then MPD_PORT=$(echo "$bob" | grep -e "^mpdport=" | cut -d = -f 2- );else MPD_PORT="6600";fi
     if [[ `echo "$bob" | grep -c -e "^mpdpass="` > 0 ]];then MPD_PASS=$(echo "$bob" | grep -e "^mpdpass=" | cut -d = -f 2- );else MPD_PASS="";fi
     if [[ `echo "$bob" | grep -c -e "^queuesize="` > 0 ]];then PLAYLIST_TRIGGER=$(echo "$bob" | grep -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
@@ -78,7 +77,6 @@ function read_variables() {
 }
 
 function rotate_songlog {
-
     if [ -f "$ConfigLogFile" ];then
         tempfile=$(mktemp)
         currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
@@ -94,7 +92,6 @@ function rotate_songlog {
 }
 
 function rotate_genrelog {
-
     if [ -f "$GenreLogFile" ];then
         tempfile=$(mktemp)
         currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
@@ -127,15 +124,15 @@ function read_instructions() {
         fi
     
         while IFS= read -r line; do
-            IGenre=$(echo "$line" | cut -d = -f 1) 
-            IWeight=$(echo "$line" | cut -d = -f 2-) 
+            IGenre=$(echo "$line" | cut -d = -f 1)
+            IWeight=$(echo "$line" | cut -d = -f 2-)
             if [ "${IGenre}" = "Default" ];then
                 if [ -z "$DefaultWeight" ];then
                     DefaultWeight="$IWeight"
                 fi
             else
-                ModGenre+=("${IGenre}")  
-                ModValue+=("${IWeight}")  
+                ModGenre+=("${IGenre}")
+                ModValue+=("${IWeight}")
             fi
         done < "$InstructionFile"
     else
@@ -165,17 +162,17 @@ function determine_genre_weights {
             fi
         
             for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
-                if [[ "${Genre[$i]}" = "${ModGenre[$i2]}" ]];then 
-                    GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${ModValue[$i2]}" | bc -l`) 
+                if [[ "${Genre[$i]}" = "${ModGenre[$i2]}" ]];then
+                    GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${ModValue[$i2]}" | bc -l`)
                     #GenreWeight[$i]=$(echo "${ModValue[$i2]}")
                     break
                 else
-                    GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${DefaultWeight}" | bc -l`) 
+                    GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${DefaultWeight}" | bc -l`)
                 fi
             done
         else    # regular weighting without number of songs
             for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
-                if [[ "${Genre[$i]}" = "${ModGenre[$i2]}" ]];then 
+                if [[ "${Genre[$i]}" = "${ModGenre[$i2]}" ]];then
                     GenreWeight[$i]=$(echo "${ModValue[$i2]}")
                 fi
             done
@@ -186,13 +183,13 @@ function determine_genre_weights {
         echo "${Genre[$i]} - ${GenreWeight[$i]}"
     done
 
-    #populating the "weighted" array   
+    #populating the "weighted" array
     #add the name GenreWeight times... giving us a sloppy weighting mechanism (and if it's zero, it SHOULD exit before hitting this)
     for (( i = 0; i < ${#Genre[@]}; i++));do
         if [[ ! -z "${GenreWeight[$i]}" ]];then
-            for (( i2 = 1; "$i2" <= "${GenreWeight[$i]}"; i2++ ));do 
+            for (( i2 = 1; "$i2" <= "${GenreWeight[$i]}"; i2++ ));do
                 if [ "${GenreWeight[$i]}" != "0" ]; then
-                    ChooseGenre+=("${Genre[$i]}")  
+                    ChooseGenre+=("${Genre[$i]}")
                 fi
             done
         fi
@@ -202,21 +199,21 @@ function determine_genre_weights {
 
 function choose_next_song {
        
-    #Take the already weighted array and choose a random element  
+    #Take the already weighted array and choose a random element
 
     # Doing Genre played time check
-    if [[ "${MODE}" =~ "genre" ]];then 
+    if [[ "${MODE}" =~ "genre" ]];then
         counter=0 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
         OkayGenre=""
-        while [ -z ${OkayGenre} ] && [ ${counter} -lt ${NUMGENRES} ] ;do 
+        while [ -z ${OkayGenre} ] && [ ${counter} -lt ${NUMGENRES} ] ;do
             ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
             #echo "$ChosenGenre"
-            UsedGenre=$(grep -c "@@@${ChosenGenre}" "${GenreLogFile}")   
-            for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do    
+            UsedGenre=$(grep -c "@@@${ChosenGenre}" "${GenreLogFile}")
+            for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
             
-                if [[ "${ChosenGenre}" = "${ModGenre[$i2]}" ]];then 
-                    #echo "${ChosenGenre}:${UsedGenre} and ${ModGenre[$i2]}:${GenreWeight[$i2]}"          
-                    if [ "${UsedGenre}" -gt "${GenreWeight[$i2]}" ]; then  
+                if [[ "${ChosenGenre}" = "${ModGenre[$i2]}" ]];then
+                    #echo "${ChosenGenre}:${UsedGenre} and ${ModGenre[$i2]}:${GenreWeight[$i2]}"
+                    if [ "${UsedGenre}" -gt "${GenreWeight[$i2]}" ]; then
                         echo "${ChosenGenre} already used up this hour, moving on"
                         OkayGenre=""
                     else
@@ -233,7 +230,7 @@ function choose_next_song {
 
     nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
     echo "$nowtime@@@${ChosenGenre}" >> "$GenreLogFile"
-    echo "Choosing song from $ChosenGenre..."    
+    echo "Choosing song from $ChosenGenre..."
 
     evalme=$(printf "mpc --host %s@%s --port %s find genre \"%s\" | shuf -n1" "$MPD_PASS" "$MPD_HOST" "$MPD_PORT" "$ChosenGenre")
     #echo "$evalme"
@@ -293,8 +290,8 @@ function choose_next_song {
 
         ### This needs to be changed to handle a different file structure.
         nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-        partisttime=$(printf "%.0f\n" `echo "${ARTISTTIME} * 60" | bc -l`) 
-        threshold=$(printf "%.0f\n" `echo "${nowtime} - ${partisttime}" | bc -l`) 
+        partisttime=$(printf "%.0f\n" `echo "${ARTISTTIME} * 60" | bc -l`)
+        threshold=$(printf "%.0f\n" `echo "${nowtime} - ${partisttime}" | bc -l`)
         matchvar=$(awk -F '@@@' -v threshold="$threshold" '$1 > threshold {print $2}' ${ConfigLogFile} | sed -e 's/[]$.*[\^]/\\&/g' | sed "s@${MPDBASE}@@g" | awk -F '//' '{print tolower($1)}' | detox --inline)
         if [[ "$matchvar" == *"$partist"* ]];then
             echo "Artist already used in time period; kicking back"
@@ -321,7 +318,7 @@ function need_next_song {
     #until it returns a valid match
     while [ -z "$SongFileToAdd" ];do
         choose_next_song
-    done  
+    done
     
     SongFileToAdd=${SongFileToAdd#$MPDBASE/}
 
@@ -337,7 +334,7 @@ function main {
     mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume on
     #commented because otherwise it restarts with every load...
     #mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet play
-    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet random off    
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet random off
 
     (echo qman-startup; mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT idleloop) | while read event
     do
@@ -360,7 +357,7 @@ function main {
             playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
             if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
                 need_next_song
-            fi  
+            fi
         else
             echo "Pausing... "
         fi
@@ -380,10 +377,8 @@ function main {
 }
 
 function create_example(){
-    
-    echo "Default=1" > "$ConfigDir/example_instruction"
-    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre | sed 's/$/=1/' >> "$ConfigDir/example_instruction"
-    
+    echo "Default=1" > "$StateDir/example_instruction"
+    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre | sed 's/$/=1/' >> "$StateDir/example_instruction"
 }
 
 function killing(){
@@ -401,16 +396,16 @@ function killing(){
 
 function show_help {
 
-    echo "mpdq [-d #][-c /path/to/file][-khe]" 
-    echo "  -c [instruction file to use]" 
-    echo "  -d [override default priority # 1-10]" 
-    echo "  -k Kill existing mpdq process " 
-    echo "  -e Create example instruction file " 
+    echo "mpdq [-d #][-c /path/to/file][-khe]"
+    echo "  -c [instruction file to use]"
+    echo "  -d [override default priority # 1-10]"
+    echo "  -k Kill existing mpdq process "
+    echo "  -e Create example instruction file "
     echo "  -h Show this help message"
 }
 
 function already_running {
-    if [ -f /tmp/mpdq.pid ];then 
+    if [ -f /tmp/mpdq.pid ];then
         echo "mpdq is already running; valid commands are -k or -h" >&2
         exit 97
     fi
@@ -427,31 +422,31 @@ rotate_genrelog
 while [ $# -gt 0 ]; do
 option="$1"
     case $option in
-        -e) 
+        -e)
             already_running
             create_example
             exit
-            ;;      
-        -c) 
+            ;;
+        -c)
             already_running
             shift
             InstructionFile="$1"
             shift
-            ;;      
-        -d) 
-            already_running 
+            ;;
+        -d)
+            already_running
             shift
             DefaultWeight="$1"
             ;;
-        -h)  
+        -h)
             show_help
             exit
-            ;;   
-        -k)  
+            ;;
+        -k)
             ps aux | grep $0 | grep --color=auto -v -e grep | awk '{print $2}' >> /tmp/mpdq.pid
-            read_variables 
+            read_variables
             killing
-            ;;            
+            ;;
     esac
     
 done
