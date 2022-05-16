@@ -51,6 +51,26 @@ function read_variables() {
     if [[ `echo "$bob" | grep -c -e "^mode="` > 0 ]];then MODE=$(echo "$bob" | grep -e "^mode=" | cut -d = -f 2- );else MODE="simple";fi
     if [[ `echo "$bob" | grep -c -e "^songlength="` > 0 ]];then SONGLENGTH=$(echo "$bob" | grep -e "^songlength=" | cut -d = -f 2- );else SONGLENGTH="15";fi
     if [[ `echo "$bob" | grep -c -e "^artisttime="` > 0 ]];then ARTISTTIME=$(echo "$bob" | grep -e "^songlength=" | cut -d = -f 2- );else ARTISTTIME="simple";fi
+    
+    # Determining where/how to assess song length
+    if [[ `echo "$bob" | grep -c -e "^musicinfo="` > 0 ]];then 
+        MUSICINFO=$(echo "$bob" | grep -e "^musicinfo=" | cut -d = -f 2- )
+    else 
+        if [ -f $(which ffprobe) ];then
+            MUSICINFO=ffprobe
+        else
+            if [ -f $(which exiftool) ];then
+                MUSICINFO=exiftool
+            else
+                if [ -f $(which mp3info) ];then
+                    MUSICINFO=mp3info
+                else
+                    MUSICINFO=""
+                fi
+            fi
+        fi
+    fi
+
     # Only need to do this at the beginning of the run
     mapfile -t Genre < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre )
     NUMGENRES=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre | wc -l)
@@ -221,13 +241,54 @@ function choose_next_song {
     #echo "$SongStem"
     #echo "$SongFile"
     #check that it is not too long
-    length=$(ffprobe "${SongFile}" 2>&1 | grep "Duration:" | awk -F ':' '{print $3}')
+    length=""
+
+    # The funky formatting is so that if a full path is specified, it'll still match.
+    case ${MUSICINFO} in
+        *mp3info) 
+            length=$(${MUSICINFO} -p "%S" "${SongFile}" 2>/dev/null)
+            length=$(printf "%.0f\n" `echo "${length} / 60" | bc -l`) 
+            ;;
+        *exiftool)
+            length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | grep "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
+            ;;
+        *ffprobe)
+            length=$(${MUSICINFO} "${SongFile}" 2>&1 | grep "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
+            ;;
+    esac
+    if [ -z $length ];then
+        echo "No song duration found. Do we have ffmpeg, exiftool, or mp3info?"
+        length="0"
+    fi
     if [ $length -gt $SONGLENGTH ];then
         echo "Song too long; kicking back"
         SongFileToAdd=""
     else
         #https://stackoverflow.com/questions/19801358/printing-lines-which-have-a-field-number-greater-than-in-awk
-        partist=$(ffprobe "$SongFile" 2>&1 |  grep -w -E "artist\s+" | awk -F ':' '{print $2}' | awk '{print tolower($0)}' | detox --inline)
+
+
+        partist=""
+        case ${MUSICINFO} in
+            *mp3info) 
+                ${MUSICINFO} "$SongFile"
+                partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  grep -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
+                ;;
+            *exiftool)
+                partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  grep -w -i -E "artist\s+" | awk -F ':' '{print tolower($2)}' | detox --inline)
+                ;;
+            *ffprobe)
+                partist=$(${MUSICINFO} "$SongFile" 2>&1 |  grep -w -i -E "artist\s+"  | awk -F ':' '{print tolower($2)}' | detox --inline)
+                ;;
+        esac
+
+        # echo "${partist} ${MUSICINFO}"
+        if [ -z "${partist}" ];then
+            echo "Cannot get artist information. Do we have ffmpeg, mp3info, or exiftool?"
+            partist="mpdq_unknown"
+        fi
+
+
+        ### This needs to be changed to handle a different file structure.
         nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
         partisttime=$(printf "%.0f\n" `echo "${ARTISTTIME} * 60" | bc -l`)
         threshold=$(printf "%.0f\n" `echo "${nowtime} - ${partisttime}" | bc -l`)
@@ -291,12 +352,8 @@ function main {
         fi
 
         #If MPD is not set to repeat: off, random: off, and consume: on, just wait for the next idle loop
-        pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | awk -F ' ' '{print $4 $6 $10}')
-        # I do not know why MPC sometimes returns this.
-        if [[ "$pauseme" == *":"* ]]; then
-            pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | awk -F ' ' '{print $3 $5 $9}')
-        fi
-        if [ "$pauseme" == "offoffon" ];then
+        pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | grep "repeat: off" | grep "consume: on" | grep -c "random: off")
+        if [ "$pauseme" == "1" ];then
             playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
             if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
                 need_next_song
