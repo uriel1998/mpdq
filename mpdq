@@ -8,8 +8,11 @@ set -o pipefail
 ConfigDir=${XDG_CONFIG_HOME:-$HOME/.config}/mpdq
 ConfigFile=$ConfigDir/mpdq.ini
 StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
-ConfigLogFile=$XDG_STATE_HOME/playedsongs.log
-GenreLogFile=$XDG_STATE_HOME/playedgenres.log
+if [ ! -d ${StateDir} ]; then
+    mkdir -p ${StateDir}
+fi
+ConfigLogFile=${StateDir}/playedsongs.log
+GenreLogFile=${StateDir}/playedgenres.log
 RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
 
 SCRIPT=$0
