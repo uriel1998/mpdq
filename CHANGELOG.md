@@ -1,5 +1,25 @@
-* [2020-12-14 14:31:39 CDT] - independent log for songs for no repeats HEAD -> master, tag: v1.3.0
-* [2020-12-07 14:20:58 CDT] - update gitlab/master, github/master, github/HEAD, fc/master
+* [2022-03-23 21:16:29 CDT] - some bugs with the implementation, removed constant errors if you didn't have mp3info or exiftool installed HEAD -> master, tag: 1.4
+* [2022-03-23 20:49:32 CDT] - added along with auto-finding alternatives. Fixed a bug on the pausing bit. gitlab/master, github/master, github/HEAD, fc/master
+* [2021-11-03 09:24:14 CDT] - I have learned the hard way about fast forwards, le sigh python
+* [2021-11-03 09:22:38 CDT] - remote-tracking branch 'github'
+* [2021-11-03 09:13:36 CDT] - 673a9cc N 2021-11-03 09:13:36 -0400 Steven Saus         .
+* [2021-11-03 09:02:58 CDT] - aa13aaf N 2021-11-03 09:02:58 -0400 Steven Saus         docs
+* [2021-11-03 08:59:24 CDT] - theme jekyll-theme-midnight
+* [2021-11-03 08:58:00 CDT] - up docs
+* [2021-11-03 08:55:10 CDT] - theme jekyll-theme-minimal
+* [2021-11-03 09:20:16 CDT] - remote-tracking branch 'gitlab/master'
+* [2021-11-03 13:19:43 CDT] - to fix docs
+* [2021-11-03 09:13:36 CDT] - 9259c9b N 2021-11-03 09:13:36 -0400 Steven Saus         .
+* [2021-11-03 09:02:58 CDT] - 00ef423 N 2021-11-03 09:02:58 -0400 Steven Saus         docs
+* [2021-11-03 08:59:24 CDT] - theme jekyll-theme-midnight
+* [2021-11-03 08:58:00 CDT] - up docs
+* [2021-11-03 08:58:00 CDT] - up docs
+* [2021-11-03 08:55:10 CDT] - theme jekyll-theme-minimal
+* [2021-11-03 08:54:12 CDT] - up docs layout
+* [2021-08-26 18:46:17 CDT] - some reason MPC hates me here.... oh well.
+* [2020-12-14 14:32:57 CDT] - changelog
+* [2020-12-14 14:31:39 CDT] - independent log for songs for no repeats tag: v1.3.0
+* [2020-12-07 14:20:58 CDT] - update
 * [2020-12-07 14:15:41 CDT] - find instead of mpc search so it stops overmatching tag: v1.2.2
 * [2020-12-06 00:08:04 CDT] - changelog
 * [2020-12-06 00:05:44 CDT] - escaping spaces in genre matching tag: v1.2.1
