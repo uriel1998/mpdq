@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/bin/bash -e
+set -o pipefail
 
 ########################################################################
 # Definitions
@@ -10,6 +11,7 @@ StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
 ConfigLogFile=$XDG_STATE_HOME/playedsongs.log
 GenreLogFile=$XDG_STATE_HOME/playedgenres.log
 RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+
 SCRIPT=$0
 InstructionFile=""
 DefaultPriority=1
@@ -27,30 +29,33 @@ SONGLENGTH=10
 
 
 function init_config() {
-    if [ -f "$GenreLogFile" ];then
-        touch "$GenreLogFile"
+    if [ -f "$GenreLogFile" ]
+    then touch "$GenreLogFile"
     fi
-    
-    if [ -f "$ConfigLogFile" ];then
-        touch "$ConfigLogFile"
+    if [ -f "$ConfigLogFile" ]
+    then touch "$ConfigLogFile"
     fi
 }
 
 function read_variables() {
-    if [ -f "$ConfigFile" ];then
-        bob=$(cat "$ConfigFile")
+    if [ -f "$ConfigFile" ]
+    then config=$(cat "$ConfigFile")
     fi
     # If there's no config file or a line is malformed or missing, sub in the default value
-    if [[ `echo "$bob" | grep -c -e "^musicdir="` > 0 ]];then MPDBASE=$(echo "$bob" | grep -e "^musicdir=" | cut -d = -f 2- );else MPDBASE="$HOME/Music";fi
-    if [[ `echo "$bob" | grep -c -e "^mpdserver="` > 0 ]];then MPD_HOST=$(echo "$bob" | grep -e "^mpdserver=" | cut -d = -f 2- );else MPD_HOST="localhost";fi
-    if [[ `echo "$bob" | grep -c -e "^mpdport="` > 0 ]];then MPD_PORT=$(echo "$bob" | grep -e "^mpdport=" | cut -d = -f 2- );else MPD_PORT="6600";fi
-    if [[ `echo "$bob" | grep -c -e "^mpdpass="` > 0 ]];then MPD_PASS=$(echo "$bob" | grep -e "^mpdpass=" | cut -d = -f 2- );else MPD_PASS="";fi
-    if [[ `echo "$bob" | grep -c -e "^queuesize="` > 0 ]];then PLAYLIST_TRIGGER=$(echo "$bob" | grep -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
-    if [[ `echo "$bob" | grep -c -e "^hours="` > 0 ]];then SONGAGE=$(echo "$bob" | grep -e "^hours=" | cut -d = -f 2- );else SONGAGE="8";fi
-    if [[ `echo "$bob" | grep -c -e "^songhours="` > 0 ]];then SONGHOURS=$(echo "$bob" | grep -e "^songhours=" | cut -d = -f 2- );else SONGHOURS="8";fi
-    if [[ `echo "$bob" | grep -c -e "^mode="` > 0 ]];then MODE=$(echo "$bob" | grep -e "^mode=" | cut -d = -f 2- );else MODE="simple";fi
-    if [[ `echo "$bob" | grep -c -e "^songlength="` > 0 ]];then SONGLENGTH=$(echo "$bob" | grep -e "^songlength=" | cut -d = -f 2- );else SONGLENGTH="15";fi
-    if [[ `echo "$bob" | grep -c -e "^artisttime="` > 0 ]];then ARTISTTIME=$(echo "$bob" | grep -e "^songlength=" | cut -d = -f 2- );else ARTISTTIME="simple";fi
+
+    MPDBASE="$(echo "$config" | grep -e "^musicdir=" | cut -d = -f 2- ||
+        cat "$XDG_CONFIG_HOME/mpd/mpd.conf" | grep "^music" | cut -d'"' -f2 ||
+        echo $HOME/Music)"
+    MPD_HOST="$(echo "$config" | grep -e "^mpdserver=" | cut -d = -f 2- || echo localhost)"
+    MPD_PASS=$(echo "$config" | grep -e "^mpdpass=" | cut -d = -f 2-) &&
+      MPD_HOST="$MPD_PASS@$MPD_HOST"
+    MPD_PORT=$(echo "$config" | grep -e "^mpdport=" | cut -d = -f 2- || echo 6600)
+    if [[ `echo "$config" | grep -c -e "^queuesize="` > 0 ]];then PLAYLIST_TRIGGER=$(echo "$config" | grep -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
+    if [[ `echo "$config" | grep -c -e "^hours="` > 0 ]];then SONGAGE=$(echo "$config" | grep -e "^hours=" | cut -d = -f 2- );else SONGAGE="8";fi
+    if [[ `echo "$config" | grep -c -e "^songhours="` > 0 ]];then SONGHOURS=$(echo "$config" | grep -e "^songhours=" | cut -d = -f 2- );else SONGHOURS="8";fi
+    if [[ `echo "$config" | grep -c -e "^mode="` > 0 ]];then MODE=$(echo "$config" | grep -e "^mode=" | cut -d = -f 2- );else MODE="simple";fi
+    if [[ `echo "$config" | grep -c -e "^songlength="` > 0 ]];then SONGLENGTH=$(echo "$config" | grep -e "^songlength=" | cut -d = -f 2- );else SONGLENGTH="15";fi
+    if [[ `echo "$config" | grep -c -e "^artisttime="` > 0 ]];then ARTISTTIME=$(echo "$config" | grep -e "^songlength=" | cut -d = -f 2- );else ARTISTTIME="simple";fi
     
     # Determining where/how to assess song length
     if [[ `echo "$bob" | grep -c -e "^musicinfo="` > 0 ]];then 
@@ -71,9 +76,10 @@ function read_variables() {
         fi
     fi
 
+
     # Only need to do this at the beginning of the run
-    mapfile -t Genre < <( mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre )
-    NUMGENRES=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre | wc -l)
+    mapfile -t Genre < <( mpc --host $MPD_HOST --port $MPD_PORT list genre )
+    NUMGENRES=$(mpc --host $MPD_HOST --port $MPD_PORT list genre | wc -l)
 }
 
 function rotate_songlog {
@@ -146,15 +152,14 @@ function read_instructions() {
 
 
 function determine_genre_weights {
-
     #This is not light, but it's only done once a run.
     #loop through genre, if not in array ModGenre, then apply DefaultWeight
 
-    TotalNumSongs=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT listall | wc -l)
+    TotalNumSongs=$(mpc --host $MPD_HOST --port $MPD_PORT listall | wc -l)
     for ((i = 0; i < ${#Genre[@]}; i++));do
         #determine weight of genre in music directory
         if [[ "${MODE}" =~ "song" ]];then
-            GenreNumSongs[$i]=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT find genre "${Genre[$i]}" | wc -l)
+            GenreNumSongs[$i]=$(mpc --host $MPD_HOST --port $MPD_PORT find genre "${Genre[$i]}" | wc -l)
         
             GenreSongWeight[$i]=$(printf "%.0f\n" `echo "(${GenreNumSongs[$i]} / $TotalNumSongs)*1000" | bc -l`)
             if [ ${GenreSongWeight[$i]} = 0 ];then
@@ -232,11 +237,9 @@ function choose_next_song {
     echo "$nowtime@@@${ChosenGenre}" >> "$GenreLogFile"
     echo "Choosing song from $ChosenGenre..."
 
-    evalme=$(printf "mpc --host %s@%s --port %s find genre \"%s\" | shuf -n1" "$MPD_PASS" "$MPD_HOST" "$MPD_PORT" "$ChosenGenre")
-    #echo "$evalme"
-    SongStem=$(eval "$evalme")
+    SongStem=$(mpc --host $MPD_HOST --port $MPD_PORT find genre \"$ChosenGenre\" | shuf -n1)
     # Changed to deal with more spaces and escaping...
-    #SongStem=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT find genre '${ChosenGenre}' | shuf -n1)
+    #SongStem=$(mpc --host $MPD_HOST --port $MPD_PORT find genre '${ChosenGenre}' | shuf -n1)
     SongFile="$MPDBASE/$SongStem"
     #echo "$SongStem"
     #echo "$SongFile"
@@ -312,7 +315,6 @@ function choose_next_song {
 }
 
 function need_next_song {
-
     SongFileToAdd=""
 
     #until it returns a valid match
@@ -322,21 +324,20 @@ function need_next_song {
     
     SongFileToAdd=${SongFileToAdd#$MPDBASE/}
 
-    `mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT add "$SongFileToAdd"`
+    `mpc --host $MPD_HOST --port $MPD_PORT add "$SongFileToAdd"`
     #reset match tests
     SongFileToAdd=""
 }
 
 function main {
-    
     rotate_songlog
     rotate_genrelog
-    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume on
+    mpc --host $MPD_HOST --port $MPD_PORT --quiet consume on
     #commented because otherwise it restarts with every load...
-    #mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet play
-    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet random off
+    #mpc --host $MPD_HOST --port $MPD_PORT --quiet play
+    mpc --host $MPD_HOST --port $MPD_PORT --quiet random off
 
-    (echo qman-startup; mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT idleloop) | while read event
+    (echo qman-startup; mpc --host $MPD_HOST --port $MPD_PORT idleloop) | while read event
     do
         # Messy, but closes all subprocesses out
         if [ ! -f /tmp/mpdq.pid ];then
@@ -352,9 +353,11 @@ function main {
         fi
 
         #If MPD is not set to repeat: off, random: off, and consume: on, just wait for the next idle loop
+
         pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | grep "repeat: off" | grep "consume: on" | grep -c "random: off")
         if [ "$pauseme" == "1" ];then
             playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
+
             if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
                 need_next_song
             fi
@@ -371,31 +374,32 @@ function main {
             RunningLogRotateTime=$ctime
         fi
     done
-    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume off
+    mpc --host $MPD_HOST --port $MPD_PORT --quiet consume off
     
-    #mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet pause-if-playing
+    #mpc --host $MPD_HOST --port $MPD_PORT --quiet pause-if-playing
 }
 
 function create_example(){
-    echo "Default=1" > "$StateDir/example_instruction"
-    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT list genre | sed 's/$/=1/' >> "$StateDir/example_instruction"
+    mkdir -p "$StateDir"
+    ExampleFile="$StateDir/example_instruction"
+    echo "Default=1" > "$ExampleFile"
+    mpc --host $MPD_HOST --port $MPD_PORT list genre | sed 's/$/=1/' >> "$ExampleFile"
+    echo "Example config placed at $ExampleFile"
 }
 
 function killing(){
-    
     while read VPID; do
         if [ $VPID != "$$" ];then
             kill -9 "$VPID" &> /dev/null
         fi
     done < /tmp/mpdq.pid
     rm /tmp/mpdq.pid
-    mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet consume off
-    #mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT --quiet pause-if-playing
+    mpc --host $MPD_HOST --port $MPD_PORT --quiet consume off
+    #mpc --host $MPD_HOST --port $MPD_PORT --quiet pause-if-playing
     exit
 }
 
 function show_help {
-
     echo "mpdq [-d #][-c /path/to/file][-khe]"
     echo "  -c [instruction file to use]"
     echo "  -d [override default priority # 1-10]"
@@ -450,14 +454,13 @@ option="$1"
     esac
     
 done
-    read_instructions
-    determine_genre_weights
-    #Will not be echoed if killing process, as killing exits the program first
 
-            echo "$$" >> /tmp/mpdq.pid
-                
-                
-            trap killing EXIT
+read_instructions
+determine_genre_weights
+#Will not be echoed if killing process, as killing exits the program first
 
-            main
-            ;;
+echo "$$" >> /tmp/mpdq.pid
+
+trap killing EXIT
+
+main
