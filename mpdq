@@ -1,5 +1,4 @@
-#!/bin/bash -e
-set -o pipefail
+#!/bin/bash
 
 ########################################################################
 # Definitions
@@ -61,8 +60,8 @@ function read_variables() {
     if [[ `echo "$config" | grep -c -e "^artisttime="` > 0 ]];then ARTISTTIME=$(echo "$config" | grep -e "^songlength=" | cut -d = -f 2- );else ARTISTTIME="simple";fi
     
     # Determining where/how to assess song length
-    if [[ `echo "$bob" | grep -c -e "^musicinfo="` > 0 ]];then 
-        MUSICINFO=$(echo "$bob" | grep -e "^musicinfo=" | cut -d = -f 2- )
+    if [[ `echo "$config" | grep -c -e "^musicinfo="` > 0 ]];then 
+        MUSICINFO=$(echo "$config" | grep -e "^musicinfo=" | cut -d = -f 2- )
     else 
         if [ -f $(which ffprobe) ];then
             MUSICINFO=ffprobe
@@ -78,7 +77,6 @@ function read_variables() {
             fi
         fi
     fi
-
 
     # Only need to do this at the beginning of the run
     mapfile -t Genre < <( mpc --host $MPD_HOST --port $MPD_PORT list genre )
@@ -237,18 +235,13 @@ function choose_next_song {
     nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
     echo "$nowtime@@@${ChosenGenre}" >> "$GenreLogFile"
     echo "Choosing song from $ChosenGenre..."
-    
-    echo "mpc --host ${MPD_HOST} --port ${MPD_PORT} find genre \"${ChosenGenre}\""
-    SongStem=$(mpc --host ${MPD_HOST} --port ${MPD_PORT} find genre \"${ChosenGenre}\" | shuf -n1)
-    
     # Changed to deal with more spaces and escaping...
-    #SongStem=$(mpc --host $MPD_HOST --port $MPD_PORT find genre '${ChosenGenre}' | shuf -n1)
+    evalstring=$(printf "mpc --host %s --port %s find genre \"%s\" | shuf -n1" "${MPD_HOST}" "${MPD_PORT}" "${ChosenGenre}")
+    # Again not 100% sure why the subshell needs an & here???
+    SongStem=$(eval ${evalstring} &)
     SongFile="$MPDBASE/$SongStem"
-    #echo "$SongStem"
-    #echo "$SongFile"
     #check that it is not too long
     length=""
-
     # The funky formatting is so that if a full path is specified, it'll still match.
     case ${MUSICINFO} in
         *mp3info) 
@@ -259,7 +252,8 @@ function choose_next_song {
             length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | grep "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
             ;;
         *ffprobe)
-            length=$(${MUSICINFO} "${SongFile}" 2>&1 | grep "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
+            # Why the & at the end is needed for ffprobe ONLY is beyond me...
+            length=$(${MUSICINFO} "${SongFile}" 2>&1 | grep "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' & )
             ;;
     esac
     if [ -z $length ];then
