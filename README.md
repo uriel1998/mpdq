@@ -160,6 +160,9 @@ genres listed, but it is totally unneeded.
 The instruction file should end in a newline. If it does not, `mpdq` will add 
 one automatically.
 
+If the instruction "default.cfg" exists in the configuration directory, it will 
+automatically be used. If that file does not exist, the default value ("1") will 
+be applied to all genres.
 
 ### Mode
 
