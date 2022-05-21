@@ -10,6 +10,7 @@ StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
 if [ ! -d ${StateDir} ]; then
     mkdir -p ${StateDir}
 fi
+Fifo_Name=${StateDir}/mpdq_fifo
 ConfigLogFile=${StateDir}/playedsongs.log
 GenreLogFile=${StateDir}/playedgenres.log
 RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
