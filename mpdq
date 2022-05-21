@@ -121,6 +121,9 @@ function file_ends_with_newline() {
 }
 
 function read_instructions() {
+    if [ ! -f "$InstructionFile" ] && [ -f "${ConfigDir}/default.cfg" ];then
+        InstructionFile="${ConfigDir}/default.cfg"
+    fi
     if [ -f "$InstructionFile" ];then
         #Fixing if no newline
         if ! file_ends_with_newline "$InstructionFile";then
@@ -265,8 +268,6 @@ function choose_next_song {
         SongFileToAdd=""
     else
         #https://stackoverflow.com/questions/19801358/printing-lines-which-have-a-field-number-greater-than-in-awk
-
-
         partist=""
         case ${MUSICINFO} in
             *mp3info) 
