@@ -1,5 +1,24 @@
-* [2022-03-23 21:16:29 CDT] - some bugs with the implementation, removed constant errors if you didn't have mp3info or exiftool installed HEAD -> master, tag: 1.4
-* [2022-03-23 20:49:32 CDT] - added along with auto-finding alternatives. Fixed a bug on the pausing bit. gitlab/master, github/master, github/HEAD, fc/master
+* [2022-05-21 17:25:29 CDT] - docs; note file path changes for config directories HEAD -> master, tag: 1.5
+* [2022-05-21 17:23:27 CDT] - default instruction file option gitlab/master, github/master, github/HEAD, fc/master
+* [2022-05-16 19:19:51 CDT] - selection of infotool
+* [2022-05-16 18:59:41 CDT] - for some reason didn't want to exit the subshell...
+* [2022-05-16 16:08:15 CDT] - XDG_STATE_HOME/mpdq if doesn't exist, subbed ${StateDir} in
+* [2022-05-16 17:02:09 CDT] - pull request #6 from xeruf/fixes
+* [2022-05-16 17:02:02 CDT] - branch 'master' into fixes
+* [2022-05-16 16:59:27 CDT] - pull request #3 from xeruf/master
+* [2022-05-16 16:59:16 CDT] - branch 'master' into master
+* [2022-05-15 19:24:14 CDT] - readme
+* [2022-05-14 19:04:16 CDT] - debug message; noted that artist time is filename dependent and needs changed
+* [2022-05-14 18:30:52 CDT] - mp3info to last chance since it only does ID3v1
+* [2022-05-14 18:20:47 CDT] - typo
+* [2022-05-13 20:31:18 CDT] - configurable (and more sane) support for different info tools
+* [2022-03-28 21:53:31 CDT] - a1 N 2022-03-28 21:53:31 -0400 Steven Saus         Missed a 2>/dev/null
+* [2022-03-23 21:18:45 CDT] - changelog
+* [2022-03-23 21:16:29 CDT] - some bugs with the implementation, removed constant errors if you didn't have mp3info or exiftool installed tag: 1.4
+* [2022-03-23 20:49:32 CDT] - added along with auto-finding alternatives. Fixed a bug on the pausing bit.
+* [2021-11-20 09:01:48 CDT] - work without passwords and simplify config reading
+* [2021-11-20 08:39:39 CDT] - error at file end
+* [2021-11-20 08:32:57 CDT] - & reformat code
 * [2021-11-03 09:24:14 CDT] - I have learned the hard way about fast forwards, le sigh python
 * [2021-11-03 09:22:38 CDT] - remote-tracking branch 'github'
 * [2021-11-03 09:13:36 CDT] - 673a9cc N 2021-11-03 09:13:36 -0400 Steven Saus         .
