@@ -10,7 +10,7 @@ StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
 if [ ! -d ${StateDir} ]; then
     mkdir -p ${StateDir}
 fi
-Fifo_Name=${StateDir}/mpdq_fifo
+RelayName=${StateDir}/mpdq_cmd
 ConfigLogFile=${StateDir}/playedsongs.log
 GenreLogFile=${StateDir}/playedgenres.log
 RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
@@ -328,6 +328,22 @@ function need_next_song {
     SongFileToAdd=""
 }
 
+function read_our_relay {
+    # this is intentionally simple at this point, only the most recent thing in,
+    # then wipe it clean, if it doesn't parse, then yeet it.
+    relay_command=(tail -1 ${RelayName})
+    rm -rf ${RelayName}
+    case ${relay_command} in
+        kill) killing ;;
+        cfg=*) 
+            # This is immediately tested in the next step to see if it's a file
+            InstructionFile=$(echo ${relay_command} | awk -F 'cfg=' '{print $2}')
+            read_instructions
+            ;;
+        *) ;;
+    esac
+}
+
 function main {
     rotate_songlog
     rotate_genrelog
@@ -338,6 +354,9 @@ function main {
 
     (echo qman-startup; mpc --host $MPD_HOST --port $MPD_PORT idleloop) | while read event
     do
+        if [ -f ${RelayName} ]
+            read_our_relay
+        fi
         # Messy, but closes all subprocesses out
         if [ ! -f /tmp/mpdq.pid ];then
             killing
@@ -441,11 +460,18 @@ option="$1"
             shift
             DefaultWeight="$1"
             ;;
+        -r) 
+            shift
+            echo "$1" > ${RelayName}
+            echo "${1} config file sent to mpdq relay file"
+            exit
+            ;;
         -h)
             show_help
             exit
             ;;
         -k)
+            echo "kill" > ${RelayName}
             ps aux | grep $0 | grep --color=auto -v -e grep | awk '{print $2}' >> /tmp/mpdq.pid
             read_variables
             killing
