@@ -354,7 +354,7 @@ function main {
 
     (echo qman-startup; mpc --host $MPD_HOST --port $MPD_PORT idleloop) | while read event
     do
-        if [ -f ${RelayName} ]
+        if [ -f ${RelayName} ];then 
             read_our_relay
         fi
         # Messy, but closes all subprocesses out
