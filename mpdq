@@ -4,6 +4,9 @@
 # Definitions
 ########################################################################
 
+grep_bin=$(which grep)
+
+
 ConfigDir=${XDG_CONFIG_HOME:-$HOME/.config}/mpdq
 ConfigFile=$ConfigDir/mpdq.ini
 StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
@@ -46,23 +49,23 @@ function read_variables() {
     fi
     # If there's no config file or a line is malformed or missing, sub in the default value
 
-    MPDBASE="$(echo "$config" | grep -e "^musicdir=" | cut -d = -f 2- ||
-        cat "$XDG_CONFIG_HOME/mpd/mpd.conf" | grep "^music" | cut -d'"' -f2 ||
+    MPDBASE="$(echo "$config" | ${grep_bin} -e "^musicdir=" | cut -d = -f 2- ||
+        cat "$XDG_CONFIG_HOME/mpd/mpd.conf" | ${grep_bin} "^music" | cut -d'"' -f2 ||
         echo $HOME/Music)"
-    MPD_HOST="$(echo "$config" | grep -e "^mpdserver=" | cut -d = -f 2- || echo localhost)"
-    MPD_PASS=$(echo "$config" | grep -e "^mpdpass=" | cut -d = -f 2-) &&
+    MPD_HOST="$(echo "$config" | ${grep_bin} -e "^mpdserver=" | cut -d = -f 2- || echo localhost)"
+    MPD_PASS=$(echo "$config" | ${grep_bin} -e "^mpdpass=" | cut -d = -f 2-) &&
       MPD_HOST="$MPD_PASS@$MPD_HOST"
-    MPD_PORT=$(echo "$config" | grep -e "^mpdport=" | cut -d = -f 2- || echo 6600)
-    if [[ `echo "$config" | grep -c -e "^queuesize="` > 0 ]];then PLAYLIST_TRIGGER=$(echo "$config" | grep -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
-    if [[ `echo "$config" | grep -c -e "^hours="` > 0 ]];then SONGAGE=$(echo "$config" | grep -e "^hours=" | cut -d = -f 2- );else SONGAGE="8";fi
-    if [[ `echo "$config" | grep -c -e "^songhours="` > 0 ]];then SONGHOURS=$(echo "$config" | grep -e "^songhours=" | cut -d = -f 2- );else SONGHOURS="8";fi
-    if [[ `echo "$config" | grep -c -e "^mode="` > 0 ]];then MODE=$(echo "$config" | grep -e "^mode=" | cut -d = -f 2- );else MODE="simple";fi
-    if [[ `echo "$config" | grep -c -e "^songlength="` > 0 ]];then SONGLENGTH=$(echo "$config" | grep -e "^songlength=" | cut -d = -f 2- );else SONGLENGTH="15";fi
-    if [[ `echo "$config" | grep -c -e "^artisttime="` > 0 ]];then ARTISTTIME=$(echo "$config" | grep -e "^songlength=" | cut -d = -f 2- );else ARTISTTIME="simple";fi
+    MPD_PORT=$(echo "$config" | ${grep_bin} -e "^mpdport=" | cut -d = -f 2- || echo 6600)
+    if [[ `echo "$config" | ${grep_bin} -c -e "^queuesize="` > 0 ]];then PLAYLIST_TRIGGER=$(echo "$config" | ${grep_bin} -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^hours="` > 0 ]];then SONGAGE=$(echo "$config" | ${grep_bin} -e "^hours=" | cut -d = -f 2- );else SONGAGE="8";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^songhours="` > 0 ]];then SONGHOURS=$(echo "$config" | ${grep_bin} -e "^songhours=" | cut -d = -f 2- );else SONGHOURS="8";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^mode="` > 0 ]];then MODE=$(echo "$config" | ${grep_bin} -e "^mode=" | cut -d = -f 2- );else MODE="simple";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^songlength="` > 0 ]];then SONGLENGTH=$(echo "$config" | ${grep_bin} -e "^songlength=" | cut -d = -f 2- );else SONGLENGTH="15";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^artisttime="` > 0 ]];then ARTISTTIME=$(echo "$config" | ${grep_bin} -e "^songlength=" | cut -d = -f 2- );else ARTISTTIME="simple";fi
     
     # Determining where/how to assess song length
-    if [[ `echo "$config" | grep -c -e "^musicinfo="` > 0 ]];then 
-        MUSICINFO=$(echo "$config" | grep -e "^musicinfo=" | cut -d = -f 2- )
+    if [[ `echo "$config" | ${grep_bin} -c -e "^musicinfo="` > 0 ]];then 
+        MUSICINFO=$(echo "$config" | ${grep_bin} -e "^musicinfo=" | cut -d = -f 2- )
     else 
         if [ -f $(which ffprobe) ];then
             MUSICINFO=ffprobe
@@ -217,7 +220,7 @@ function choose_next_song {
         OkayGenre=""
         while [ -z ${OkayGenre} ] && [ ${counter} -lt ${NUMGENRES} ] ;do
             ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
-            UsedGenre=$(/usr/bin/grep -c -e "@@@${ChosenGenre}" ${GenreLogFile} &)
+            UsedGenre=$(${grep_bin} -c -e "@@@${ChosenGenre}" ${GenreLogFile} &)
             for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
             
                 if [[ "${ChosenGenre}" = "${ModGenre[$i2]}" ]];then
@@ -253,11 +256,11 @@ function choose_next_song {
             length=$(printf "%.0f\n" `echo "${length} / 60" | bc -l`) 
             ;;
         *exiftool)
-            length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | grep "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
+            length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
             ;;
         *ffprobe)
             # Why the & at the end is needed for ffprobe ONLY is beyond me...
-            length=$(${MUSICINFO} "${SongFile}" 2>&1 | grep "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' & )
+            length=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' & )
             ;;
     esac
     if [ -z $length ];then
@@ -273,13 +276,13 @@ function choose_next_song {
         case ${MUSICINFO} in
             *mp3info) 
                 ${MUSICINFO} "$SongFile"
-                partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  grep -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
+                partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  ${grep_bin} -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
                 ;;
             *exiftool)
-                partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  grep -w -i -E "artist\s+" | awk -F ':' '{print tolower($2)}' | detox --inline)
+                partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  ${grep_bin} -w -i -E "artist\s+" | awk -F ':' '{print tolower($2)}' | detox --inline)
                 ;;
             *ffprobe)
-                partist=$(${MUSICINFO} "$SongFile" 2>&1 |  grep -w -i -E "artist\s+"  | awk -F ':' '{print tolower($2)}' | detox --inline)
+                partist=$(${MUSICINFO} "$SongFile" 2>&1 |  ${grep_bin} -w -i -E "artist\s+"  | awk -F ':' '{print tolower($2)}' | detox --inline)
                 ;;
         esac
 
@@ -300,7 +303,7 @@ function choose_next_song {
             SongFileToAdd=""
         else
                 
-            if cat "$ConfigLogFile" | grep -qF "$SongFile"; then
+            if cat "$ConfigLogFile" | ${grep_bin} -qF "$SongFile"; then
                 echo "Song recently used; kicking back"
                 SongFileToAdd=""
             else
@@ -372,7 +375,7 @@ function main {
 
         #If MPD is not set to repeat: off, random: off, and consume: on, just wait for the next idle loop
 
-        pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | grep "repeat: off" | grep "consume: on" | grep -c "random: off")
+        pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | ${grep_bin} "repeat: off" | ${grep_bin} "consume: on" | ${grep_bin} -c "random: off")
         if [ "$pauseme" == "1" ];then
             playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
 
@@ -441,6 +444,10 @@ read_variables
 rotate_songlog
 rotate_genrelog
 
+
+## TODO: Startup not working correctly when one instance already up; they both 
+# exit when the SECOND one does... :/ 
+
 while [ $# -gt 0 ]; do
 option="$1"
     case $option in
@@ -472,7 +479,7 @@ option="$1"
             ;;
         -k)
             echo "kill" > ${RelayName}
-            ps aux | grep $0 | grep --color=auto -v -e grep | awk '{print $2}' >> /tmp/mpdq.pid
+            ps aux | ${grep_bin} $0 | ${grep_bin} --color=auto -v -e ${grep_bin} | awk '{print $2}' >> /tmp/mpdq.pid
             read_variables
             killing
             ;;
