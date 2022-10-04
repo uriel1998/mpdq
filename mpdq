@@ -5,7 +5,13 @@
 ########################################################################
 
 grep_bin=$(which grep)
+LOUD=0
 
+function loud() {
+    if [ $LOUD -eq 1 ];then
+        echo "$@"
+    fi
+}
 
 ConfigDir=${XDG_CONFIG_HOME:-$HOME/.config}/mpdq
 ConfigFile=$ConfigDir/mpdq.ini
@@ -93,7 +99,7 @@ function rotate_songlog {
         currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
         difftime=$(( "$SONGHOURS" * 60 * 60 ))
         hightime=$(( "$currenttime"-"$difftime" ))
-        echo "Eliminating song log entries older than $SONGHOURS hours."
+        loud "Eliminating song log entries older than $SONGHOURS hours."
         #echo "$hightime / $difftime"
         cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
         mv -f "$tempfile" "$ConfigLogFile"
@@ -108,7 +114,7 @@ function rotate_genrelog {
         currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
         difftime=$(( "$SONGAGE" * 60 * 60 ))
         hightime=$(( "$currenttime"-"$difftime" ))
-        echo "Eliminating genre log entries older than $SONGAGE hours."
+        loud "Eliminating genre log entries older than $SONGAGE hours."
         #echo "$hightime / $difftime"
         cat "$GenreLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
         mv -f "$tempfile" "$GenreLogFile"
@@ -150,7 +156,7 @@ function read_instructions() {
             fi
         done < "$InstructionFile"
     else
-        echo "No instruction file specified; using default values for all genres."
+        loud "No instruction file specified; using default values for all genres."
         if [ -z "$DefaultWeight" ];then
             DefaultWeight=1
         fi
@@ -193,7 +199,7 @@ function determine_genre_weights {
         if [ -z ${GenreWeight[$i]} ];then
             GenreWeight[$i]=${DefaultWeight}
         fi
-        echo "${Genre[$i]} - ${GenreWeight[$i]}"
+        loud "${Genre[$i]} - ${GenreWeight[$i]}"
     done
 
     #populating the "weighted" array
@@ -225,7 +231,7 @@ function choose_next_song {
             
                 if [[ "${ChosenGenre}" = "${ModGenre[$i2]}" ]];then
                     if [ "${UsedGenre}" -gt "${GenreWeight[$i2]}" ]; then
-                        echo "${ChosenGenre} already used up this hour, moving on"
+                        loud "${ChosenGenre} already used up this hour, moving on"
                         OkayGenre=""
                     else
                         OkayGenre="YES"
@@ -241,7 +247,7 @@ function choose_next_song {
 
     nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
     echo "$nowtime@@@${ChosenGenre}" >> "$GenreLogFile"
-    echo "Choosing song from $ChosenGenre..."
+    loud "Choosing song from $ChosenGenre..."
     # Changed to deal with more spaces and escaping...
     evalstring=$(printf "mpc --host %s --port %s find genre \"%s\" | shuf -n1" "${MPD_HOST}" "${MPD_PORT}" "${ChosenGenre}")
     # Again not 100% sure why the subshell needs an & here???
@@ -264,11 +270,11 @@ function choose_next_song {
             ;;
     esac
     if [ -z $length ];then
-        echo "No song duration found. Do we have ffmpeg, exiftool, or mp3info?"
+        loud "No song duration found. Do we have ffmpeg, exiftool, or mp3info?"
         length="0"
     fi
     if [ $length -gt $SONGLENGTH ];then
-        echo "Song too long; kicking back"
+        loud "Song too long; kicking back"
         SongFileToAdd=""
     else
         #https://stackoverflow.com/questions/19801358/printing-lines-which-have-a-field-number-greater-than-in-awk
@@ -286,9 +292,9 @@ function choose_next_song {
                 ;;
         esac
 
-        # echo "${partist} ${MUSICINFO}"
+        # loud "${partist} ${MUSICINFO}"
         if [ -z "${partist}" ];then
-            echo "Cannot get artist information. Do we have ffmpeg, mp3info, or exiftool?"
+            loud "Cannot get artist information. Do we have ffmpeg, mp3info, or exiftool?"
             partist="mpdq_unknown"
         fi
 
@@ -299,12 +305,12 @@ function choose_next_song {
         threshold=$(printf "%.0f\n" `echo "${nowtime} - ${partisttime}" | bc -l`)
         matchvar=$(awk -F '@@@' -v threshold="$threshold" '$1 > threshold {print $2}' ${ConfigLogFile} | sed -e 's/[]$.*[\^]/\\&/g' | sed "s@${MPDBASE}@@g" | awk -F '//' '{print tolower($1)}' | detox --inline)
         if [[ "$matchvar" == *"$partist"* ]];then
-            echo "Artist already used in time period; kicking back"
+            loud "Artist already used in time period; kicking back"
             SongFileToAdd=""
         else
                 
             if cat "$ConfigLogFile" | ${grep_bin} -qF "$SongFile"; then
-                echo "Song recently used; kicking back"
+                loud "Song recently used; kicking back"
                 SongFileToAdd=""
             else
                 SongFileToAdd="$SongFile"
@@ -383,7 +389,7 @@ function main {
                 need_next_song
             fi
         else
-            echo "Pausing... "
+            loud "Pausing... "
         fi
         ctime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
         Timertime=$(( ctime-3600 ))
@@ -403,9 +409,9 @@ function main {
 function create_example(){
     mkdir -p "$StateDir"
     ExampleFile="$StateDir/example_instruction"
-    echo "Default=1" > "$ExampleFile"
+    loud "Default=1" > "$ExampleFile"
     mpc --host $MPD_HOST --port $MPD_PORT list genre | sed 's/$/=1/' >> "$ExampleFile"
-    echo "Example config placed at $ExampleFile"
+    loud "Example config placed at $ExampleFile"
 }
 
 function killing(){
@@ -427,11 +433,12 @@ function show_help {
     echo "  -k Kill existing mpdq process "
     echo "  -e Create example instruction file "
     echo "  -h Show this help message"
+    echo "  --loud get more feedback on mpdq's execution"
 }
 
 function already_running {
     if [ -f /tmp/mpdq.pid ];then
-        echo "mpdq is already running; valid commands are -k or -h" >&2
+        loud "mpdq is already running; valid commands are -k or -h" >&2
         exit 97
     fi
 }
@@ -451,6 +458,10 @@ rotate_genrelog
 while [ $# -gt 0 ]; do
 option="$1"
     case $option in
+        --loud)     
+            export LOUD=1
+            shift
+            ;;    
         -e)
             already_running
             create_example
@@ -470,7 +481,7 @@ option="$1"
         -r) 
             shift
             echo "$1" > ${RelayName}
-            echo "${1} config file sent to mpdq relay file"
+            loud "${1} config file sent to mpdq relay file"
             exit
             ;;
         -h)
