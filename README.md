@@ -195,6 +195,7 @@ again during that time period.  It is independent of the `hour` variable.
 * -k : Kill a currently running `mpdq` process.
 * -e : Create an example instruction file at $XDG_STATE_HOME/mpdq/example_instruction.
 * -h : Show a short help message.
+* --loud: Give more feedback to terminal (yes, this means the default is quiet mode)  
 
 `mpdq` will automatically pause if MPD is *not* set to:
 
