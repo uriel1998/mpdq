@@ -361,8 +361,12 @@ function main {
     #mpc --host $MPD_HOST --port $MPD_PORT --quiet play
     mpc --host $MPD_HOST --port $MPD_PORT --quiet random off
 
-    (echo qman-startup; mpc --host $MPD_HOST --port $MPD_PORT idleloop) | while read event
+    while true
     do
+        # Moving this here takes away a subshell problem. Killing needs to be 
+        # done through relayfile now.
+        event=$(mpc --host $MPD_HOST --port $MPD_PORT idle)
+    
         if [ -f ${RelayName} ];then 
             read_our_relay
         fi
@@ -461,7 +465,7 @@ option="$1"
         --loud)     
             export LOUD=1
             shift
-            ;;    
+            ;;             
         -e)
             already_running
             create_example
@@ -481,7 +485,7 @@ option="$1"
         -r) 
             shift
             echo "$1" > ${RelayName}
-            loud "${1} config file sent to mpdq relay file"
+            loud "${1} sent to mpdq relay file"
             exit
             ;;
         -h)
@@ -503,7 +507,5 @@ determine_genre_weights
 #Will not be echoed if killing process, as killing exits the program first
 
 echo "$$" >> /tmp/mpdq.pid
-
-trap killing EXIT
 
 main
