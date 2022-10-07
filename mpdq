@@ -263,12 +263,13 @@ function choose_next_song {
     # TODO change to InternalRelay
     case ${MUSICINFO} in
         *mp3info) 
-            ${MUSICINFO} -p "%S" "${SongFile}" 2>/dev/null >
             length=$(${MUSICINFO} -p "%S" "${SongFile}" 2>/dev/null)
             length=$(printf "%.0f\n" `echo "${length} / 60" | bc -l`) 
             ;;
         *exiftool)
-            length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
+            ${MUSICINFO} "${SongFile}" 2>/dev/null | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' > "${InternalRelay}"
+            #length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
+            length=$(cat "${InternalRelay}")
             ;;
         *ffprobe)
             # Why the & at the end is needed for ffprobe ONLY is beyond me...
