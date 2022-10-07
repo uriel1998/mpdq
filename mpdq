@@ -19,6 +19,16 @@ StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
 if [ ! -d ${StateDir} ]; then
     mkdir -p ${StateDir}
 fi
+
+# We are going to switch to using a FIFO throughout
+# to avoid subshells so that this can be used in Docker 
+# (and probably also make things a bit more secure)
+MyFIFO="${StateDir}/info_fifo"
+if [ ! -p "${FIFO_NAME}" ];then
+    mkfifo "${FIFO_NAME}"
+fi
+
+
 RelayName=${StateDir}/mpdq_cmd
 ConfigLogFile=${StateDir}/playedsongs.log
 GenreLogFile=${StateDir}/playedgenres.log
@@ -281,7 +291,6 @@ function choose_next_song {
         partist=""
         case ${MUSICINFO} in
             *mp3info) 
-                ${MUSICINFO} "$SongFile"
                 partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  ${grep_bin} -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
                 ;;
             *exiftool)
