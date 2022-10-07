@@ -20,9 +20,6 @@ if [ ! -d ${StateDir} ]; then
     mkdir -p ${StateDir}
 fi
 
-# We are going to switch to using a second internal relayfile
-# to avoid subshells and avoid blocking
-InternalRelay="${StateDir}/info_relay"
 RelayName=${StateDir}/mpdq_cmd
 ConfigLogFile=${StateDir}/playedsongs.log
 GenreLogFile=${StateDir}/playedgenres.log
@@ -260,16 +257,13 @@ function choose_next_song {
     #check that it is not too long
     length=""
     # The funky formatting is so that if a full path is specified, it'll still match.
-    # TODO change to InternalRelay
     case ${MUSICINFO} in
         *mp3info) 
             length=$(${MUSICINFO} -p "%S" "${SongFile}" 2>/dev/null)
             length=$(printf "%.0f\n" `echo "${length} / 60" | bc -l`) 
             ;;
         *exiftool)
-            ${MUSICINFO} "${SongFile}" 2>/dev/null | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' > "${InternalRelay}"
-            #length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
-            length=$(cat "${InternalRelay}")
+            length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
             ;;
         *ffprobe)
             # Why the & at the end is needed for ffprobe ONLY is beyond me...
@@ -286,7 +280,6 @@ function choose_next_song {
     else
         #https://stackoverflow.com/questions/19801358/printing-lines-which-have-a-field-number-greater-than-in-awk
         partist=""
-    # TODO change to InternalRelay        
         case ${MUSICINFO} in
             *mp3info) 
                 partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  ${grep_bin} -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
