@@ -266,6 +266,7 @@ function choose_next_song {
     #check that it is not too long
     length=""
     # The funky formatting is so that if a full path is specified, it'll still match.
+    # TODO change to FIFO here
     case ${MUSICINFO} in
         *mp3info) 
             length=$(${MUSICINFO} -p "%S" "${SongFile}" 2>/dev/null)
@@ -289,6 +290,7 @@ function choose_next_song {
     else
         #https://stackoverflow.com/questions/19801358/printing-lines-which-have-a-field-number-greater-than-in-awk
         partist=""
+    # TODO change to FIFO here        
         case ${MUSICINFO} in
             *mp3info) 
                 partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  ${grep_bin} -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
