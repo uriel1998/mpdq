@@ -13,8 +13,6 @@ function loud() {
     fi
 }
 
-ConfigDir=${XDG_CONFIG_HOME:-$HOME/.config}/mpdq
-StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
 
 # This is an awful hack
 if [ "$UID" == "0" ];then 
@@ -22,6 +20,10 @@ if [ "$UID" == "0" ];then
     export XDG_STATE_HOME=/usr/local/state
     export MPD_HOST=mycomplicatedpassword@localhost
 fi
+
+ConfigDir=${XDG_CONFIG_HOME:-$HOME/.config}/mpdq
+StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
+
 
 ConfigFile=${ConfigDir}/mpdq.ini
 RelayName=${StateDir}/mpdq_cmd
