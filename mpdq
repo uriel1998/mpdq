@@ -14,12 +14,16 @@ function loud() {
 }
 
 ConfigDir=${XDG_CONFIG_HOME:-$HOME/.config}/mpdq
-ConfigFile=$ConfigDir/mpdq.ini
 StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
-if [ ! -d ${StateDir} ]; then
-    mkdir -p ${StateDir}
+
+# This is an awful hack
+if [ "$UID" == "0" ];then 
+    export XDG_CONFIG_HOME=/usr/local/share
+    export XDG_STATE_HOME=/usr/local/state
+    export MPD_HOST=mycomplicatedpassword@localhost
 fi
 
+ConfigFile=${ConfigDir}/mpdq.ini
 RelayName=${StateDir}/mpdq_cmd
 ConfigLogFile=${StateDir}/playedsongs.log
 GenreLogFile=${StateDir}/playedgenres.log
