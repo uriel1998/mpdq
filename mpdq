@@ -13,9 +13,15 @@ function loud() {
     fi
 }
 
-
+echo "####################################################################"
+echo "${UID}"
+echo "${XDG_CONFIG_HOME}"
+echo "${XDG_STATE_HOME}"
+echo "${MPD_HOST}"
+echo "####################################################################"
 # This is an awful hack
 if [ "$UID" == "0" ];then 
+    echo "IA AM SDL:KFJ:LSDKJF:LEJEF"
     export XDG_CONFIG_HOME=/usr/local/share
     export XDG_STATE_HOME=/usr/local/state
     export MPD_HOST=mycomplicatedpassword@localhost
@@ -23,7 +29,12 @@ fi
 
 ConfigDir=${XDG_CONFIG_HOME:-$HOME/.config}/mpdq
 StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
-
+echo "####################################################################"
+echo "${UID}"
+echo "${XDG_CONFIG_HOME}"
+echo "${XDG_STATE_HOME}"
+echo "${MPD_HOST}"
+echo "####################################################################"
 
 ConfigFile=${ConfigDir}/mpdq.ini
 RelayName=${StateDir}/mpdq_cmd
@@ -367,11 +378,14 @@ function main {
     #mpc --host $MPD_HOST --port $MPD_PORT --quiet play
     mpc --host $MPD_HOST --port $MPD_PORT --quiet random off
 
-    while true
+
+    (echo qman-startup; mpc --host $MPD_HOST --port $MPD_PORT idleloop) | while read event
+#TODO - offer this switch back and forth for those who want to reduce forking
+    #while true
     do
         # Moving this here takes away a subshell problem. Killing needs to be 
         # done through relayfile now.
-        event=$(mpc --host $MPD_HOST --port $MPD_PORT idle)
+        #event=$(mpc --host $MPD_HOST --port $MPD_PORT idle)
     
         if [ -f ${RelayName} ];then 
             read_our_relay
