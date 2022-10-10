@@ -15,7 +15,7 @@ function loud() {
 
 # This is an awful hack
 if [ "$UID" == "0" ];then 
-    loud "MPDQ is running as root. Not that /usr/local/share and"
+    loud "MPDQ is running as root. Note that /usr/local/share and"
     loud "/usr/local/state are being used as XDG directories."
     export XDG_CONFIG_HOME=/usr/local/share
     export XDG_STATE_HOME=/usr/local/state
