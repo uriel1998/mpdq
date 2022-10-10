@@ -13,28 +13,17 @@ function loud() {
     fi
 }
 
-echo "####################################################################"
-echo "${UID}"
-echo "${XDG_CONFIG_HOME}"
-echo "${XDG_STATE_HOME}"
-echo "${MPD_HOST}"
-echo "####################################################################"
 # This is an awful hack
 if [ "$UID" == "0" ];then 
-    echo "IA AM SDL:KFJ:LSDKJF:LEJEF"
+    loud "MPDQ is running as root. Not that /usr/local/share and"
+    loud "/usr/local/state are being used as XDG directories."
     export XDG_CONFIG_HOME=/usr/local/share
     export XDG_STATE_HOME=/usr/local/state
-    export MPD_HOST=mycomplicatedpassword@localhost
 fi
 
 ConfigDir=${XDG_CONFIG_HOME:-$HOME/.config}/mpdq
 StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
-echo "####################################################################"
-echo "${UID}"
-echo "${XDG_CONFIG_HOME}"
-echo "${XDG_STATE_HOME}"
-echo "${MPD_HOST}"
-echo "####################################################################"
+
 
 ConfigFile=${ConfigDir}/mpdq.ini
 RelayName=${StateDir}/mpdq_cmd
