@@ -374,6 +374,14 @@ function main {
     do
         # Moving this here takes away a subshell problem. Killing needs to be 
         # done through relayfile now.
+        # maybe length of queue read here?
+            #        pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | ${grep_bin} "repeat: off" | ${grep_bin} "consume: on" | ${grep_bin} -c "random: off")
+       # if [ "$pauseme" == "1" ];then
+#            playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
+
+ #           if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
+#                need_next_song
+ #           fi
         #event=$(mpc --host $MPD_HOST --port $MPD_PORT idle)
     
         if [ -f ${RelayName} ];then 
