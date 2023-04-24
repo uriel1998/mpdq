@@ -7,12 +7,6 @@
 grep_bin=$(which grep)
 LOUD=0
 
-function loud() {
-    if [ $LOUD -eq 1 ];then
-        echo "$@"
-    fi
-}
-
 # This is an awful hack
 if [ "$UID" == "0" ];then 
     loud "MPDQ is running as root. Note that /usr/local/share and"
@@ -45,6 +39,13 @@ SONGLENGTH=10
 ########################################################################
 # Functions
 ########################################################################
+
+function loud() {
+    if [ $LOUD -eq 1 ];then
+        echo "$@"
+    fi
+}
+
 
 
 function init_config() {
@@ -128,7 +129,6 @@ function rotate_genrelog {
     else
         touch "$GenreLogFile"
     fi
-    
 }
 
 
@@ -454,6 +454,7 @@ function show_help {
     echo "  -k Kill existing mpdq process "
     echo "  -e Create example instruction file "
     echo "  -h Show this help message"
+    echo "  -r [instruction_file] - send new instruction file to mpdq"
     echo "  --loud get more feedback on mpdq's execution"
 }
 
