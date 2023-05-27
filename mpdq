@@ -68,7 +68,7 @@ function read_variables() {
         echo $HOME/Music)"
     MPD_HOST="$(echo "$config" | ${grep_bin} -e "^mpdserver=" | cut -d = -f 2- || echo localhost)"
     MPD_PASS=$(echo "$config" | ${grep_bin} -e "^mpdpass=" | cut -d = -f 2-) &&
-      MPD_HOST="$MPD_PASS@$MPD_HOST"
+    MPD_HOST="$MPD_PASS@$MPD_HOST"
     MPD_PORT=$(echo "$config" | ${grep_bin} -e "^mpdport=" | cut -d = -f 2- || echo 6600)
     if [[ `echo "$config" | ${grep_bin} -c -e "^queuesize="` > 0 ]];then PLAYLIST_TRIGGER=$(echo "$config" | ${grep_bin} -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
     if [[ `echo "$config" | ${grep_bin} -c -e "^hours="` > 0 ]];then SONGAGE=$(echo "$config" | ${grep_bin} -e "^hours=" | cut -d = -f 2- );else SONGAGE="8";fi
@@ -363,26 +363,9 @@ function main {
     rotate_songlog
     rotate_genrelog
     mpc --host $MPD_HOST --port $MPD_PORT --quiet consume on
-    #commented because otherwise it restarts with every load...
-    #mpc --host $MPD_HOST --port $MPD_PORT --quiet play
     mpc --host $MPD_HOST --port $MPD_PORT --quiet random off
 
 
-    (echo qman-startup; mpc --host $MPD_HOST --port $MPD_PORT idleloop) | while read event
-#TODO - offer this switch back and forth for those who want to reduce forking
-    #while true
-    do
-        # Moving this here takes away a subshell problem. Killing needs to be 
-        # done through relayfile now.
-        # maybe length of queue read here?
-            #        pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | ${grep_bin} "repeat: off" | ${grep_bin} "consume: on" | ${grep_bin} -c "random: off")
-       # if [ "$pauseme" == "1" ];then
-#            playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
-
- #           if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
-#                need_next_song
- #           fi
-        #event=$(mpc --host $MPD_HOST --port $MPD_PORT idle)
     
         if [ -f ${RelayName} ];then 
             read_our_relay
@@ -391,19 +374,16 @@ function main {
         if [ ! -f /tmp/mpdq.pid ];then
             killing
         fi
-        if [ "$event" = "mixer" ]
-        then
-            continue
-        fi
-        if [ "$event" = "update" ]
-        then
-            continue
-        fi
+
 
         #If MPD is not set to repeat: off, random: off, and consume: on, just wait for the next idle loop
 
         pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | ${grep_bin} "repeat: off" | ${grep_bin} "consume: on" | ${grep_bin} -c "random: off")
         if [ "$pauseme" == "1" ];then
+        
+            # TODO - change this to a DO-WHILE
+            # TODO -  need to grep for artist in songlog
+        
             playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
 
             if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
@@ -412,19 +392,9 @@ function main {
         else
             loud "Pausing... "
         fi
-        ctime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-        Timertime=$(( ctime-3600 ))
-        # Has it been an hour?
-        # It *checks* every hour, but only rotates those older than $SONGAGE
-        if [ $Timertime -ge $RunningLogRotateTime ];then
-            rotate_songlog
-            rotate_genrelog
-            RunningLogRotateTime=$ctime
-        fi
-    done
-    mpc --host $MPD_HOST --port $MPD_PORT --quiet consume off
-    
-    #mpc --host $MPD_HOST --port $MPD_PORT --quiet pause-if-playing
+        rotate_songlog
+        rotate_genrelog
+
 }
 
 function create_example(){
@@ -442,8 +412,7 @@ function killing(){
         fi
     done < /tmp/mpdq.pid
     rm /tmp/mpdq.pid
-    mpc --host $MPD_HOST --port $MPD_PORT --quiet consume off
-    #mpc --host $MPD_HOST --port $MPD_PORT --quiet pause-if-playing
+ 
     exit
 }
 
