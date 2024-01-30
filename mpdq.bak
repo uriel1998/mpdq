@@ -1,0 +1,498 @@
+#!/bin/bash
+
+########################################################################
+# Definitions
+########################################################################
+
+grep_bin=$(which grep)
+LOUD=0
+
+# This is an awful hack
+if [ "$UID" == "0" ];then 
+    loud "MPDQ is running as root. Note that /usr/local/share and"
+    loud "/usr/local/state are being used as XDG directories."
+    export XDG_CONFIG_HOME=/usr/local/share
+    export XDG_STATE_HOME=/usr/local/state
+fi
+
+ConfigDir=${XDG_CONFIG_HOME:-$HOME/.config}/mpdq
+StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
+
+
+ConfigFile=${ConfigDir}/mpdq.ini
+RelayName=${StateDir}/mpdq_cmd
+ConfigLogFile=${StateDir}/playedsongs.log
+GenreLogFile=${StateDir}/playedgenres.log
+RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+
+SCRIPT=$0
+InstructionFile=""
+DefaultPriority=1
+tmp2=$(mktemp)
+
+ModGenre=()
+ModValue=()
+GenreWeight=()
+ChooseGenre=()
+SONGLENGTH=10
+
+########################################################################
+# Functions
+########################################################################
+
+function loud() {
+    if [ $LOUD -eq 1 ];then
+        echo "$@"
+    fi
+}
+
+
+
+function init_config() {
+    if [ -f "$GenreLogFile" ]
+    then touch "$GenreLogFile"
+    fi
+    if [ -f "$ConfigLogFile" ]
+    then touch "$ConfigLogFile"
+    fi
+}
+
+function read_variables() {
+    if [ -f "$ConfigFile" ]
+    then config=$(cat "$ConfigFile")
+    fi
+    # If there's no config file or a line is malformed or missing, sub in the default value
+
+    MPDBASE="$(echo "$config" | ${grep_bin} -e "^musicdir=" | cut -d = -f 2- ||
+        cat "$XDG_CONFIG_HOME/mpd/mpd.conf" | ${grep_bin} "^music" | cut -d'"' -f2 ||
+        echo $HOME/Music)"
+    MPD_HOST="$(echo "$config" | ${grep_bin} -e "^mpdserver=" | cut -d = -f 2- || echo localhost)"
+    MPD_PASS=$(echo "$config" | ${grep_bin} -e "^mpdpass=" | cut -d = -f 2-) &&
+    MPD_HOST="$MPD_PASS@$MPD_HOST"
+    MPD_PORT=$(echo "$config" | ${grep_bin} -e "^mpdport=" | cut -d = -f 2- || echo 6600)
+    if [[ `echo "$config" | ${grep_bin} -c -e "^queuesize="` > 0 ]];then PLAYLIST_TRIGGER=$(echo "$config" | ${grep_bin} -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^hours="` > 0 ]];then SONGAGE=$(echo "$config" | ${grep_bin} -e "^hours=" | cut -d = -f 2- );else SONGAGE="8";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^songhours="` > 0 ]];then SONGHOURS=$(echo "$config" | ${grep_bin} -e "^songhours=" | cut -d = -f 2- );else SONGHOURS="8";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^mode="` > 0 ]];then MODE=$(echo "$config" | ${grep_bin} -e "^mode=" | cut -d = -f 2- );else MODE="simple";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^songlength="` > 0 ]];then SONGLENGTH=$(echo "$config" | ${grep_bin} -e "^songlength=" | cut -d = -f 2- );else SONGLENGTH="15";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^artisttime="` > 0 ]];then ARTISTTIME=$(echo "$config" | ${grep_bin} -e "^songlength=" | cut -d = -f 2- );else ARTISTTIME="simple";fi
+    
+    # Determining where/how to assess song length
+    if [[ `echo "$config" | ${grep_bin} -c -e "^musicinfo="` > 0 ]];then 
+        MUSICINFO=$(echo "$config" | ${grep_bin} -e "^musicinfo=" | cut -d = -f 2- )
+    else 
+        if [ -f $(which ffprobe) ];then
+            MUSICINFO=ffprobe
+        else
+            if [ -f $(which exiftool) ];then
+                MUSICINFO=exiftool
+            else
+                if [ -f $(which mp3info) ];then
+                    MUSICINFO=mp3info
+                else
+                    MUSICINFO=""
+                fi
+            fi
+        fi
+    fi
+
+    # Only need to do this at the beginning of the run
+    mapfile -t Genre < <( mpc --host $MPD_HOST --port $MPD_PORT list genre )
+    NUMGENRES=$(mpc --host $MPD_HOST --port $MPD_PORT list genre | wc -l)
+}
+
+function rotate_songlog {
+    if [ -f "$ConfigLogFile" ];then
+        tempfile=$(mktemp)
+        currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+        difftime=$(( "$SONGHOURS" * 60 * 60 ))
+        hightime=$(( "$currenttime"-"$difftime" ))
+        loud "Eliminating song log entries older than $SONGHOURS hours."
+        #echo "$hightime / $difftime"
+        cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
+        mv -f "$tempfile" "$ConfigLogFile"
+    else
+        touch "$ConfigLogFile"
+    fi
+}
+
+function rotate_genrelog {
+    if [ -f "$GenreLogFile" ];then
+        tempfile=$(mktemp)
+        currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+        difftime=$(( "$SONGAGE" * 60 * 60 ))
+        hightime=$(( "$currenttime"-"$difftime" ))
+        loud "Eliminating genre log entries older than $SONGAGE hours."
+        #echo "$hightime / $difftime"
+        cat "$GenreLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
+        mv -f "$tempfile" "$GenreLogFile"
+    else
+        touch "$GenreLogFile"
+    fi
+}
+
+
+#From https://stackoverflow.com/questions/38746/how-to-detect-file-ends-in-newline
+function file_ends_with_newline() {
+    [[ $(tail -c1 "$1" | wc -l) -gt 0 ]]
+}
+
+function read_instructions() {
+    if [ ! -f "$InstructionFile" ] && [ -f "${ConfigDir}/default.cfg" ];then
+        InstructionFile="${ConfigDir}/default.cfg"
+    fi
+    if [ -f "$InstructionFile" ];then
+        #Fixing if no newline
+        if ! file_ends_with_newline "$InstructionFile";then
+            cat "$InstructionFile" > "$tmp2"
+            echo "" >> "$tmp2"
+            mv -f "$tmp2" "$InstructionFile"
+            rm "$tmp2"
+        fi
+    
+        while IFS= read -r line; do
+            IGenre=$(echo "$line" | cut -d = -f 1)
+            IWeight=$(echo "$line" | cut -d = -f 2-)
+            if [ "${IGenre}" = "Default" ];then
+                if [ -z "$DefaultWeight" ];then
+                    DefaultWeight="$IWeight"
+                fi
+            else
+                ModGenre+=("${IGenre}")
+                ModValue+=("${IWeight}")
+            fi
+        done < "$InstructionFile"
+    else
+        loud "No instruction file specified; using default values for all genres."
+        if [ -z "$DefaultWeight" ];then
+            DefaultWeight=1
+        fi
+    fi
+    
+}
+
+
+function determine_genre_weights {
+    #This is not light, but it's only done once a run.
+    #loop through genre, if not in array ModGenre, then apply DefaultWeight
+
+    TotalNumSongs=$(mpc --host $MPD_HOST --port $MPD_PORT listall | wc -l)
+    for ((i = 0; i < ${#Genre[@]}; i++));do
+        #determine weight of genre in music directory
+        if [[ "${MODE}" =~ "song" ]];then
+            GenreNumSongs[$i]=$(mpc --host $MPD_HOST --port $MPD_PORT find genre "${Genre[$i]}" | wc -l)
+        
+            GenreSongWeight[$i]=$(printf "%.0f\n" `echo "(${GenreNumSongs[$i]} / $TotalNumSongs)*1000" | bc -l`)
+            if [ ${GenreSongWeight[$i]} = 0 ];then
+                GenreSongWeight[$i]=1
+            fi
+        
+            for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
+                if [[ "${Genre[$i]}" = "${ModGenre[$i2]}" ]];then
+                    GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${ModValue[$i2]}" | bc -l`)
+                    #GenreWeight[$i]=$(echo "${ModValue[$i2]}")
+                    break
+                else
+                    GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${DefaultWeight}" | bc -l`)
+                fi
+            done
+        else    # regular weighting without number of songs
+            for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
+                if [[ "${Genre[$i]}" = "${ModGenre[$i2]}" ]];then
+                    GenreWeight[$i]=$(echo "${ModValue[$i2]}")
+                fi
+            done
+        fi
+        if [ -z ${GenreWeight[$i]} ];then
+            GenreWeight[$i]=${DefaultWeight}
+        fi
+        loud "${Genre[$i]} - ${GenreWeight[$i]}"
+    done
+
+    #populating the "weighted" array
+    #add the name GenreWeight times... giving us a sloppy weighting mechanism (and if it's zero, it SHOULD exit before hitting this)
+    for (( i = 0; i < ${#Genre[@]}; i++));do
+        if [[ ! -z "${GenreWeight[$i]}" ]];then
+            for (( i2 = 1; "$i2" <= "${GenreWeight[$i]}"; i2++ ));do
+                if [ "${GenreWeight[$i]}" != "0" ]; then
+                    ChooseGenre+=("${Genre[$i]}")
+                fi
+            done
+        fi
+    done
+}
+
+
+function choose_next_song {
+       
+    #Take the already weighted array and choose a random element
+
+    # Doing Genre played time check
+    if [[ "${MODE}" =~ "genre" ]];then
+        counter=0 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
+        OkayGenre=""
+        while [ -z ${OkayGenre} ] && [ ${counter} -lt ${NUMGENRES} ] ;do
+            ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
+            UsedGenre=$(${grep_bin} -c -e "@@@${ChosenGenre}" ${GenreLogFile} &)
+            for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
+            
+                if [[ "${ChosenGenre}" = "${ModGenre[$i2]}" ]];then
+                    if [ "${UsedGenre}" -gt "${GenreWeight[$i2]}" ]; then
+                        loud "${ChosenGenre} already used up this hour, moving on"
+                        OkayGenre=""
+                    else
+                        OkayGenre="YES"
+                    fi
+                fi
+            done
+            counter=$((counter+1))
+        done
+    else
+        ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
+    fi
+    # END MODE = GENREHOUR
+
+    nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+    echo "$nowtime@@@${ChosenGenre}" >> "$GenreLogFile"
+    loud "Choosing song from $ChosenGenre..."
+    # Changed to deal with more spaces and escaping...
+    evalstring=$(printf "mpc --host %s --port %s find genre \"%s\" | shuf -n1" "${MPD_HOST}" "${MPD_PORT}" "${ChosenGenre}")
+    # Again not 100% sure why the subshell needs an & here???
+    SongStem=$(eval ${evalstring} &)
+    SongFile="$MPDBASE/$SongStem"
+    #check that it is not too long
+    length=""
+    # The funky formatting is so that if a full path is specified, it'll still match.
+    case ${MUSICINFO} in
+        *mp3info) 
+            length=$(${MUSICINFO} -p "%S" "${SongFile}" 2>/dev/null)
+            length=$(printf "%.0f\n" `echo "${length} / 60" | bc -l`) 
+            ;;
+        *exiftool)
+            length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
+            ;;
+        *ffprobe)
+            # Why the & at the end is needed for ffprobe ONLY is beyond me...
+            length=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' & )
+            ;;
+    esac
+    if [ -z $length ];then
+        loud "No song duration found. Do we have ffmpeg, exiftool, or mp3info?"
+        length="0"
+    fi
+    if [ $length -gt $SONGLENGTH ];then
+        loud "Song too long; kicking back"
+        SongFileToAdd=""
+    else
+        #https://stackoverflow.com/questions/19801358/printing-lines-which-have-a-field-number-greater-than-in-awk
+        partist=""
+        case ${MUSICINFO} in
+            *mp3info) 
+                partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  ${grep_bin} -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
+                ;;
+            *exiftool)
+                partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  ${grep_bin} -w -i -E "artist\s+" | awk -F ':' '{print tolower($2)}' | detox --inline)
+                ;;
+            *ffprobe)
+                partist=$(${MUSICINFO} "$SongFile" 2>&1 |  ${grep_bin} -w -i -E "artist\s+"  | awk -F ':' '{print tolower($2)}' | detox --inline)
+                ;;
+        esac
+
+        # loud "${partist} ${MUSICINFO}"
+        if [ -z "${partist}" ];then
+            loud "Cannot get artist information. Do we have ffmpeg, mp3info, or exiftool?"
+            partist="mpdq_unknown"
+        fi
+
+
+        ### This needs to be changed to handle a different file structure.
+        nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+        partisttime=$(printf "%.0f\n" `echo "${ARTISTTIME} * 60" | bc -l`)
+        threshold=$(printf "%.0f\n" `echo "${nowtime} - ${partisttime}" | bc -l`)
+        matchvar=$(awk -F '@@@' -v threshold="$threshold" '$1 > threshold {print $2}' ${ConfigLogFile} | sed -e 's/[]$.*[\^]/\\&/g' | sed "s@${MPDBASE}@@g" | awk -F '//' '{print tolower($1)}' | detox --inline)
+        if [[ "$matchvar" == *"$partist"* ]];then
+            loud "Artist already used in time period; kicking back"
+            SongFileToAdd=""
+        else
+                
+            if cat "$ConfigLogFile" | ${grep_bin} -qF "$SongFile"; then
+                loud "Song recently used; kicking back"
+                SongFileToAdd=""
+            else
+                SongFileToAdd="$SongFile"
+                #mark that we used it.
+                nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+                echo "$nowtime@@@$SongFileToAdd" >> "$ConfigLogFile"
+            fi
+        fi
+    fi
+}
+
+function need_next_song {
+    SongFileToAdd=""
+
+    #until it returns a valid match
+    while [ -z "$SongFileToAdd" ];do
+        choose_next_song
+    done
+    
+    SongFileToAdd=${SongFileToAdd#$MPDBASE/}
+
+    `mpc --host $MPD_HOST --port $MPD_PORT add "$SongFileToAdd"`
+    #reset match tests
+    SongFileToAdd=""
+}
+
+function read_our_relay {
+    # this is intentionally simple at this point, only the most recent thing in,
+    # then wipe it clean, if it doesn't parse, then yeet it.
+    relay_command=(tail -1 ${RelayName})
+    rm -rf ${RelayName}
+    case ${relay_command} in
+        kill) killing ;;
+        cfg=*) 
+            # This is immediately tested in the next step to see if it's a file
+            InstructionFile=$(echo ${relay_command} | awk -F 'cfg=' '{print $2}')
+            read_instructions
+            ;;
+        *) ;;
+    esac
+}
+
+function main {
+    rotate_songlog
+    rotate_genrelog
+    mpc --host $MPD_HOST --port $MPD_PORT --quiet consume on
+    mpc --host $MPD_HOST --port $MPD_PORT --quiet random off
+
+
+    
+        if [ -f ${RelayName} ];then 
+            read_our_relay
+        fi
+        # Messy, but closes all subprocesses out
+        if [ ! -f /tmp/mpdq.pid ];then
+            killing
+        fi
+
+
+        #If MPD is not set to repeat: off, random: off, and consume: on, just wait for the next idle loop
+
+        pauseme=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1 | ${grep_bin} "repeat: off" | ${grep_bin} "consume: on" | ${grep_bin} -c "random: off")
+        if [ "$pauseme" == "1" ];then
+        
+            # TODO - change this to a DO-WHILE
+            # TODO -  need to grep for artist in songlog
+        
+            playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
+
+            if [ $playlist_length -lt $PLAYLIST_TRIGGER ];then
+                need_next_song
+            fi
+        else
+            loud "Pausing... "
+        fi
+        rotate_songlog
+        rotate_genrelog
+
+}
+
+function create_example(){
+    mkdir -p "$StateDir"
+    ExampleFile="$StateDir/example_instruction"
+    loud "Default=1" > "$ExampleFile"
+    mpc --host $MPD_HOST --port $MPD_PORT list genre | sed 's/$/=1/' >> "$ExampleFile"
+    loud "Example config placed at $ExampleFile"
+}
+
+function killing(){
+    while read VPID; do
+        if [ $VPID != "$$" ];then
+            kill -9 "$VPID" &> /dev/null
+        fi
+    done < /tmp/mpdq.pid
+    rm /tmp/mpdq.pid
+ 
+    exit
+}
+
+function show_help {
+    echo "mpdq [-d #][-c /path/to/file][-khe]"
+    echo "  -c [instruction file to use]"
+    echo "  -d [override default priority # 1-10]"
+    echo "  -k Kill existing mpdq process "
+    echo "  -e Create example instruction file "
+    echo "  -h Show this help message"
+    echo "  -r [instruction_file] - send new instruction file to mpdq"
+    echo "  --loud get more feedback on mpdq's execution"
+}
+
+function already_running {
+    if [ -f /tmp/mpdq.pid ];then
+        loud "mpdq is already running; valid commands are -k or -h" >&2
+        exit 97
+    fi
+}
+
+########################################################################
+# Wherein we parse arguments
+########################################################################
+init_config
+read_variables
+rotate_songlog
+rotate_genrelog
+
+
+## TODO: Startup not working correctly when one instance already up; they both 
+# exit when the SECOND one does... :/ 
+
+while [ $# -gt 0 ]; do
+option="$1"
+    case $option in
+        --loud)     
+            export LOUD=1
+            shift
+            ;;             
+        -e)
+            already_running
+            create_example
+            exit
+            ;;
+        -c)
+            already_running
+            shift
+            InstructionFile="$1"
+            shift
+            ;;
+        -d)
+            already_running
+            shift
+            DefaultWeight="$1"
+            ;;
+        -r) 
+            shift
+            echo "$1" > ${RelayName}
+            loud "${1} sent to mpdq relay file"
+            exit
+            ;;
+        -h)
+            show_help
+            exit
+            ;;
+        -k)
+            echo "kill" > ${RelayName}
+            ps aux | ${grep_bin} $0 | ${grep_bin} --color=auto -v -e ${grep_bin} | awk '{print $2}' >> /tmp/mpdq.pid
+            read_variables
+            killing
+            ;;
+    esac
+    
+done
+
+read_instructions
+determine_genre_weights
+#Will not be echoed if killing process, as killing exits the program first
+
+echo "$$" >> /tmp/mpdq.pid
+
+main
