@@ -105,11 +105,18 @@ function show_help {
 }
 
 function init_config() {
-    if [ -f "$GenreLogFile" ]
-    then touch "$GenreLogFile"
+    if [ ! -d "$ConfigDir" ];then
+        mkdir -p "$ConfigDir"
     fi
-    if [ -f "$ConfigLogFile" ]
-    then touch "$ConfigLogFile"
+    if [ ! -d "$StateDir" ];then
+        mkdir -p "$ConfigDir"
+    fi
+
+    if [ ! -d "$CacheDir" ];then
+        mkdir -p "$ConfigDir"
+    fi
+    if [ -f "$ConfigLogFile" ];then 
+        touch "$ConfigLogFile"
     fi
 }
 
@@ -171,6 +178,13 @@ function rotate_songlog {
     fi
 }
 
+function create_example(){
+    ExampleFile="$ConfigDir/example_instruction"
+    loud "Default=1" > "$ExampleFile"
+    mpc --host $MPD_HOST --port $MPD_PORT list genre | sed 's/$/=1/' >> "$ExampleFile"
+    loud "Example config placed at $ExampleFile"
+    exit
+}
 
 function killing(){
     # This is probably overkill at this point, as we are avoiding subprocesses.
@@ -201,6 +215,130 @@ function read_our_relay {
 }
 
 
+function choose_next_song {
+    # To be completely rewritten, relying on random numbers and then using 
+    # the sorting criteria as a gate.  (See ROADMAP.TXT)
+       
+    #Take the already weighted array and choose a random element
+
+    # Doing Genre played time check
+    if [[ "${MODE}" =~ "genre" ]];then
+        counter=0 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
+        OkayGenre=""
+        while [ -z ${OkayGenre} ] && [ ${counter} -lt ${NUMGENRES} ] ;do
+            ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
+            UsedGenre=$(${grep_bin} -c -e "@@@${ChosenGenre}" ${GenreLogFile} &)
+            for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
+            
+                if [[ "${ChosenGenre}" = "${ModGenre[$i2]}" ]];then
+                    if [ "${UsedGenre}" -gt "${GenreWeight[$i2]}" ]; then
+                        loud "${ChosenGenre} already used up this hour, moving on"
+                        OkayGenre=""
+                    else
+                        OkayGenre="YES"
+                    fi
+                fi
+            done
+            counter=$((counter+1))
+        done
+    else
+        ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
+    fi
+    # END MODE = GENREHOUR
+
+    nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+    echo "$nowtime@@@${ChosenGenre}" >> "$GenreLogFile"
+    loud "Choosing song from $ChosenGenre..."
+    # Changed to deal with more spaces and escaping...
+    evalstring=$(printf "mpc --host %s --port %s find genre \"%s\" | shuf -n1" "${MPD_HOST}" "${MPD_PORT}" "${ChosenGenre}")
+    # Again not 100% sure why the subshell needs an & here???
+    SongStem=$(eval ${evalstring} &)
+    SongFile="$MPDBASE/$SongStem"
+    #check that it is not too long
+    length=""
+    # The funky formatting is so that if a full path is specified, it'll still match.
+    case ${MUSICINFO} in
+        *mp3info) 
+            length=$(${MUSICINFO} -p "%S" "${SongFile}" 2>/dev/null)
+            length=$(printf "%.0f\n" `echo "${length} / 60" | bc -l`) 
+            ;;
+        *exiftool)
+            length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
+            ;;
+        *ffprobe)
+            # Why the & at the end is needed for ffprobe ONLY is beyond me...
+            length=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' & )
+            ;;
+    esac
+    if [ -z $length ];then
+        loud "No song duration found. Do we have ffmpeg, exiftool, or mp3info?"
+        length="0"
+    fi
+    if [ $length -gt $SONGLENGTH ];then
+        loud "Song too long; kicking back"
+        SongFileToAdd=""
+    else
+        #https://stackoverflow.com/questions/19801358/printing-lines-which-have-a-field-number-greater-than-in-awk
+        partist=""
+        case ${MUSICINFO} in
+            *mp3info) 
+                partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  ${grep_bin} -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
+                ;;
+            *exiftool)
+                partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  ${grep_bin} -w -i -E "artist\s+" | awk -F ':' '{print tolower($2)}' | detox --inline)
+                ;;
+            *ffprobe)
+                partist=$(${MUSICINFO} "$SongFile" 2>&1 |  ${grep_bin} -w -i -E "artist\s+"  | awk -F ':' '{print tolower($2)}' | detox --inline)
+                ;;
+        esac
+
+        # loud "${partist} ${MUSICINFO}"
+        if [ -z "${partist}" ];then
+            loud "Cannot get artist information. Do we have ffmpeg, mp3info, or exiftool?"
+            partist="mpdq_unknown"
+        fi
+
+
+        ### This needs to be changed to handle a different file structure.
+        nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+        partisttime=$(printf "%.0f\n" `echo "${ARTISTTIME} * 60" | bc -l`)
+        threshold=$(printf "%.0f\n" `echo "${nowtime} - ${partisttime}" | bc -l`)
+        matchvar=$(awk -F '@@@' -v threshold="$threshold" '$1 > threshold {print $2}' ${ConfigLogFile} | sed -e 's/[]$.*[\^]/\\&/g' | sed "s@${MPDBASE}@@g" | awk -F '//' '{print tolower($1)}' | detox --inline)
+        if [[ "$matchvar" == *"$partist"* ]];then
+            loud "Artist already used in time period; kicking back"
+            SongFileToAdd=""
+        else
+                
+            if cat "$ConfigLogFile" | ${grep_bin} -qF "$SongFile"; then
+                loud "Song recently used; kicking back"
+                SongFileToAdd=""
+            else
+                SongFileToAdd="$SongFile"
+                #mark that we used it.
+                nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+                echo "$nowtime@@@$SongFileToAdd" >> "$ConfigLogFile"
+            fi
+        fi
+    fi
+}
+
+
+
+function need_next_song {
+    SongFileToAdd=""
+
+    #until it returns a valid match
+    while [ -z "$SongFileToAdd" ];do
+        choose_next_song
+    done
+    
+    SongFileToAdd=${SongFileToAdd#$MPDBASE/}
+
+    `mpc --host $MPD_HOST --port $MPD_PORT add "$SongFileToAdd"`
+    #reset match tests
+    SongFileToAdd=""
+}
+
 function main {
     rotate_songlog
     rotate_genrelog
@@ -216,7 +354,14 @@ function main {
         killing
     fi        
     
-    #CURRENT WORKPOINT
+    playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
+    
+    while [[ $playlist_length -lt $PLAYLIST_TRIGGER ]]; do
+        need_next_song
+    done
+
+#WORKPOINT
+
 }
 
 ########################################################################
