@@ -1,0 +1,42 @@
+# - get basic config
+# - find # of genres
+# - read in arrays of genres and weights
+
+
+get default value
+    get variations for specific genres
+
+BIG DIFFERENCE HERE STEVEN IS THAT YOU ARE NOT LOADING IN A BIG ARRAY,
+YOU ARE LETTING GREP/RG DO THE WORK
+
+
+# POINT ONE
+if counter > limit, ERROR
+determine number of genres
+randomly select number
+get # of genre name (mpc list genre | head | tail)
+grep our config for the genre name and matching weight value
+    use weight from config
+    if not found, use default weight value
+grep our logfile for genre name
+    if -c > weight, go to POINT ONE, increment a counter
+# POINT TWO
+if counter2 > limit, then goto POINT ONE
+get number of songs in genre
+randomly select # from that list
+find song length
+    if song length > allowed (check for hours!), goto POINT TWO, increment counter2
+grep our logfile for song name, band name
+    if -c > weight for either song or band, goto POINT TWO, increment counter2
+add song to playlist
+add info to logfile
+    
+    
+    
+    use this to find if it's been played dynamically using just one logfile
+
+        currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+        difftime=$(( "$VALUE" * 60 )) #they're in minutes
+        hightime=$(( "$currenttime"-"$difftime" ))
+        # feed this into a variable, or grep stdin (not sure you can do that)
+        cat "$GenreLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
