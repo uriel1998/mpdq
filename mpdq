@@ -68,7 +68,7 @@ LOUD=1
 # Temporary Directories
 ########################################################################
 tmp2=$(mktemp)
-
+SongFileToAdd=""
 ModGenre=()
 ModValue=()
 GenreWeight=()
@@ -229,7 +229,7 @@ function choose_next_song {
 
     GenreNumber=$(shuf -i 1-${NUMGENRES} -n 1)
     counter=1 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
-    counter2=0
+ 
     
     while [ -z ${OkayGenre} ] && [ ${counter} -lt ${NUMGENRES} ] 
     do
@@ -290,7 +290,7 @@ function choose_next_song {
                 # so we're going to use wc -l to count LINES returned which should hopefully help
         
                 if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime' | grep -e "${artist}" | wc -l` > 0 ]];then SongFile="";fi 
-                if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime2" '$1 > hightime' | grep -e "${artist}" | wc -l` > 0 ]] ;then SongFile="";fi
+                if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime2" '$1 > hightime' | grep -e "${album}" | wc -l` > 0 ]] ;then SongFile="";fi
             fi           
         else 
             SongFile=""
@@ -299,56 +299,22 @@ function choose_next_song {
         if [ -f "${SongFile}" ];then
             #add song to playlist
             #add info to logfile
-            
-            # at end to close out do-while loop
-            OkayGenre="${GenreName}"
-        
-        
-#CURRENT WORKPLACE
-
- 
-        #https://stackoverflow.com/questions/19801358/printing-lines-which-have-a-field-number-greater-than-in-awk
-        partist=""
-        case ${MUSICINFO} in
-            *mp3info) 
-                partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  ${grep_bin} -w -i "artist"  | awk -F ':' '{print tolower($2)}' | detox --inline)
-                ;;
-            *exiftool)
-                partist=$(${MUSICINFO} "$SongFile" 2>/dev/null |  ${grep_bin} -w -i -E "artist\s+" | awk -F ':' '{print tolower($2)}' | detox --inline)
-                ;;
-            *ffprobe)
-                partist=$(${MUSICINFO} "$SongFile" 2>&1 |  ${grep_bin} -w -i -E "artist\s+"  | awk -F ':' '{print tolower($2)}' | detox --inline)
-                ;;
-        esac
-
-        # loud "${partist} ${MUSICINFO}"
-        if [ -z "${partist}" ];then
-            loud "Cannot get artist information. Do we have ffmpeg, mp3info, or exiftool?"
-            partist="mpdq_unknown"
-        fi
-
-
-        ### This needs to be changed to handle a different file structure.
-        nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-        partisttime=$(printf "%.0f\n" `echo "${ARTISTTIME} * 60" | bc -l`)
-        threshold=$(printf "%.0f\n" `echo "${nowtime} - ${partisttime}" | bc -l`)
-        matchvar=$(awk -F '@@@' -v threshold="$threshold" '$1 > threshold {print $2}' ${ConfigLogFile} | sed -e 's/[]$.*[\^]/\\&/g' | sed "s@${MPDBASE}@@g" | awk -F '//' '{print tolower($1)}' | detox --inline)
-        if [[ "$matchvar" == *"$partist"* ]];then
-            loud "Artist already used in time period; kicking back"
-            SongFileToAdd=""
-        else
-                
-            if cat "$ConfigLogFile" | ${grep_bin} -qF "$SongFile"; then
-                loud "Song recently used; kicking back"
-                SongFileToAdd=""
-            else
+           
                 SongFileToAdd="$SongFile"
                 #mark that we used it.
                 nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-                echo "$nowtime@@@$SongFileToAdd" >> "$ConfigLogFile"
-            fi
+                echo "$nowtime@@@${SongFileToAdd}@${GenreName}@${artist}@${album}" >> "$ConfigLogFile"
+                loud "Adding song from ${album} by ${artist} in the ${GenreName} genre."
+                
+            # at end to close out do-while loop
+            OkayGenre="${GenreName}"
+        else
+            loud "Iteration!"
         fi
-    fi
+    done    
+#CURRENT WORKPLACE
+
+  
 }
 
 
