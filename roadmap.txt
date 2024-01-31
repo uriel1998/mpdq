@@ -40,3 +40,28 @@ add info to logfile
         hightime=$(( "$currenttime"-"$difftime" ))
         # feed this into a variable, or grep stdin (not sure you can do that)
         cat "$GenreLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
+
+
+
+ffprobe
+
+    album           : The Stoner House
+    genre           : Downtempo
+    date            : 2020
+    title           : After Hours Lo-Fi House
+    artist          : Bacayne
+    album_artist    : Bacayne
+    track           : 2
+    encoder         : Lavf58.20.100
+    major_brand     : isom
+    minor_version   : 512
+
+exiftool
+
+Album                           : The Stoner House
+Genre                           : Downtempo
+Recording Time                  : 2020
+Title                           : After Hours Lo-Fi House
+Artist                          : Bacayne
+Band                            : Bacayne
+

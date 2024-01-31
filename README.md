@@ -58,7 +58,6 @@ linux-like distros:
 
 ONE or MORE of the following for artist and song information on your `$PATH`:
 
-* [mp3info](https://www.ibiblio.org/mp3info/)
 * [exiftool](https://www.exiftool.org/)
 * [ffmpeg](https://ffmpeg.org/)
 
@@ -90,7 +89,7 @@ musicinfo=ffprobe
 
 `musicinfo` denotes the helper program that gets additional music information (like 
 duration) from the MP3. If not specified, `mpdq` searches along $PATH for (in this 
-order) `ffprobe`, `exifinfo`, and `mp3info`. If your helper program is in your $PATH,
+order) `ffprobe` and `exifinfo`. If your helper program is in your $PATH,
 you can just put the binary name, otherwise put the full path to the program. 
 
 ** IF YOU USE ANY HELPER PROGRAM BESIDES THESE THREE, YOU WILL HAVE TO EDIT THE PROGRAM ** 
