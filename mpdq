@@ -26,8 +26,11 @@ fi
 ConfigDir=${XDG_CONFIG_HOME:-$HOME/.config}/mpdq
 StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
 CacheDir=${XDG_CACHE_HOME:-$HOME/.local/state}/mpdq
+# Defining some things. This is NOT the instruction file.
 ConfigFile=${ConfigDir}/mpdq.ini
+# This is used to communicate with running background program, including killing and instruction file changes
 RelayName=${StateDir}/mpdq_cmd
+# This file will contain time song was played, its filename, the album, and artist
 ConfigLogFile=${StateDir}/playedsongs.log
 RunningLogRotateTime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
 
@@ -245,7 +248,6 @@ function choose_next_song {
             CurrWeight=$(${grep_bin} -e "${GenreName}" "${InstructionFile}" | cut -d = -f 2-)
         fi
         if [ ${TimesPlayed} -lt ${CurrWeight} ];then
-#increment coutner2
             # Use shuf to get us a random song from that genre
             evalstring=$(printf "mpc --host %s --port %s find genre \"%s\" | shuf -n1" "${MPD_HOST}" "${MPD_PORT}" "${ChosenGenre}")
             # Note to future self -- THIS MAY BORK WITHOUT A & AFTER EVALSTRING. MAYBE NOT.
@@ -270,7 +272,7 @@ function choose_next_song {
                     ;;
             esac
             if [ -z $length ];then
-                loud "No song duration found. Do we have ffmpeg, exiftool, or mp3info?"
+                loud "No song duration found. Do we have ffmpeg or exiftool?"
                 length="0"
             fi
             if [ $length -gt $SONGLENGTH ];then
@@ -282,96 +284,29 @@ function choose_next_song {
                 difftime=$(( "$ARTIST_MINS" * 60 )) #they're in minutes
                 difftime2=$(( "$ALBUM_MINS" * 60 )) #they're in minutes
                 hightime=$(( "$currenttime"-"$difftime" ))
+                hightime2=$(( "$currenttime"-"$difftime2" ))
         
-        # WE NEED TO GET ARTIST AND ALBUM NAME DUMBASS
+                # because of quoting, artists with spaces may provide extra hits using grep counting.
+                # so we're going to use wc -l to count LINES returned which should hopefully help
         
-        # feed this into a variable, or grep stdin (not sure you can do that)
-        cat "$GenreLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
-
-
-
-grep our logfile for song name, band name
-    if -c > weight for either song or band, goto POINT TWO, increment counter2
-
-             
+                if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime' | grep -e "${artist}" | wc -l` > 0 ]];then SongFile="";fi 
+                if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime2" '$1 > hightime' | grep -e "${artist}" | wc -l` > 0 ]] ;then SongFile="";fi
+            fi           
         else 
-        # end loop, kick back to beginning, counter increment by one.
+            SongFile=""
+        fi
+        
+        if [ -f "${SongFile}" ];then
+            #add song to playlist
+            #add info to logfile
+            
+            # at end to close out do-while loop
+            OkayGenre="${GenreName}"
+        
+        
 #CURRENT WORKPLACE
 
-"${variable}"
-  
-# POINT TWO
-
-
-
-add song to playlist
-add info to logfile
-    
-    
-    
-    use this to find if it's been played dynamically using just one logfile
-
-        currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-        difftime=$(( "$VALUE" * 60 )) #they're in minutes
-        hightime=$(( "$currenttime"-"$difftime" ))
-        # feed this into a variable, or grep stdin (not sure you can do that)
-        cat "$GenreLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
-
-
-
-
-        MPD_HOST="$(echo "$config" | ${grep_bin} -e "^mpdserver=" | cut -d = -f 2- || echo localhost)"
-            UsedGenre=$(${grep_bin} -c -e "@@@${ChosenGenre}" ${GenreLogFile} &)
-            for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
-            
-                if [[ "${ChosenGenre}" = "${ModGenre[$i2]}" ]];then
-                    if [ "${UsedGenre}" -gt "${GenreWeight[$i2]}" ]; then
-                        loud "${ChosenGenre} already used up this hour, moving on"
-                        OkayGenre=""
-                    else
-                        OkayGenre="YES"
-                    fi
-                fi
-            done
-            counter=$((counter+1))
-        done
-    else
-        ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
-    fi
-    # END MODE = GENREHOUR
-
-    nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-    echo "$nowtime@@@${ChosenGenre}" >> "$GenreLogFile"
-    loud "Choosing song from $ChosenGenre..."
-    # Changed to deal with more spaces and escaping...
-    evalstring=$(printf "mpc --host %s --port %s find genre \"%s\" | shuf -n1" "${MPD_HOST}" "${MPD_PORT}" "${ChosenGenre}")
-    # Again not 100% sure why the subshell needs an & here???
-    SongStem=$(eval ${evalstring} &)
-    SongFile="$MPDBASE/$SongStem"
-    #check that it is not too long
-    length=""
-    # The funky formatting is so that if a full path is specified, it'll still match.
-    case ${MUSICINFO} in
-        *mp3info) 
-            length=$(${MUSICINFO} -p "%S" "${SongFile}" 2>/dev/null)
-            length=$(printf "%.0f\n" `echo "${length} / 60" | bc -l`) 
-            ;;
-        *exiftool)
-            length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
-            ;;
-        *ffprobe)
-            # Why the & at the end is needed for ffprobe ONLY is beyond me...
-            length=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' & )
-            ;;
-    esac
-    if [ -z $length ];then
-        loud "No song duration found. Do we have ffmpeg, exiftool, or mp3info?"
-        length="0"
-    fi
-    if [ $length -gt $SONGLENGTH ];then
-        loud "Song too long; kicking back"
-        SongFileToAdd=""
-    else
+ 
         #https://stackoverflow.com/questions/19801358/printing-lines-which-have-a-field-number-greater-than-in-awk
         partist=""
         case ${MUSICINFO} in
