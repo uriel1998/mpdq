@@ -247,17 +247,49 @@ function choose_next_song {
         if [ ${TimesPlayed} -ge ${CurrWeight} ];then
             # end loop, kick back to beginning, counter increment by one.
         else 
-            #increment coutner 2
+            #increment coutner2
+            # Use shuf to get us a random song from that genre
+            evalstring=$(printf "mpc --host %s --port %s find genre \"%s\" | shuf -n1" "${MPD_HOST}" "${MPD_PORT}" "${ChosenGenre}")
+            # Note to future self -- THIS MAY BORK WITHOUT A & AFTER EVALSTRING. MAYBE NOT.
+            SongStem=$(eval ${evalstring})
+            SongFile="$MPDBASE/$SongStem"
+    
+
+    #check that it is not too long
+    length=""
+    # The funky formatting is so that if a full path is specified, it'll still match.
+    case ${MUSICINFO} in
+        *mp3info) 
+            length=$(${MUSICINFO} -p "%S" "${SongFile}" 2>/dev/null)
+            length=$(printf "%.0f\n" `echo "${length} / 60" | bc -l`) 
+            ;;
+        *exiftool)
+            length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
+            ;;
+        *ffprobe)
+            # Why the & at the end is needed for ffprobe ONLY is beyond me...
+            length=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' & )
+            ;;
+    esac
+    if [ -z $length ];then
+        loud "No song duration found. Do we have ffmpeg, exiftool, or mp3info?"
+        length="0"
+    fi
+    if [ $length -gt $SONGLENGTH ];then
+        loud "Song too long; kicking back"
+        SongFileToAdd=""
+
+
 
         
 #CURRENT WORKPLACE
 
-
+"${variable}"
   
 # POINT TWO
 
-get number of songs in genre
-randomly select # from that list
+
+
 find song length
     if song length > allowed (check for hours!), goto POINT TWO, increment counter2
 grep our logfile for song name, band name
