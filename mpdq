@@ -218,15 +218,67 @@ function read_our_relay {
 function choose_next_song {
     # To be completely rewritten, relying on random numbers and then using 
     # the sorting criteria as a gate.  (See ROADMAP.TXT)
-       
-    #Take the already weighted array and choose a random element
+    
+    GenreNumber=""
+    OkayGenre=""
+    #get random number for genre
+    
 
-    # Doing Genre played time check
-    if [[ "${MODE}" =~ "genre" ]];then
-        counter=0 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
-        OkayGenre=""
-        while [ -z ${OkayGenre} ] && [ ${counter} -lt ${NUMGENRES} ] ;do
-            ChosenGenre=${ChooseGenre[$RANDOM % ${#ChooseGenre[@]} ]}
+    GenreNumber=$(shuf -i 1-${NUMGENRES} -n 1)
+    counter=1 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
+    counter2=0
+    
+    while [ -z ${OkayGenre} ] && [ ${counter} -lt ${NUMGENRES} ] 
+    do
+        TimesPlayed=""
+        InInstruction=""
+        GenreName=""
+        CurrWeight=""
+
+        GenreName=$(mpc list genre | head -n ${GenreNumber} | tail -n 1)
+        # Genre name is just a straight search of the logfile, as the rotation should fix this
+        TimesPlayed=(cat "${ConfigLogFile}" | grep -c -e "${GenreName}")
+        InInstruction=$(${grep_bin} -c -e "${GenreName}" "${InstructionFile}")
+        if [ ${InInstruction} -eq 0 ];then
+            CurrWeight=${DefaultPriority}
+        else
+            CurrWeight=$(${grep_bin} -e "${GenreName}" "${InstructionFile}" | cut -d = -f 2-)
+        fi
+        if [ ${TimesPlayed} -ge ${CurrWeight} ];then
+            # end loop, kick back to beginning, counter increment by one.
+        else 
+            #increment coutner 2
+
+        
+#CURRENT WORKPLACE
+
+
+  
+# POINT TWO
+
+get number of songs in genre
+randomly select # from that list
+find song length
+    if song length > allowed (check for hours!), goto POINT TWO, increment counter2
+grep our logfile for song name, band name
+    if -c > weight for either song or band, goto POINT TWO, increment counter2
+add song to playlist
+add info to logfile
+    
+    
+    
+    use this to find if it's been played dynamically using just one logfile
+
+        currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+        difftime=$(( "$VALUE" * 60 )) #they're in minutes
+        hightime=$(( "$currenttime"-"$difftime" ))
+        # feed this into a variable, or grep stdin (not sure you can do that)
+        cat "$GenreLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
+
+
+
+
+        MPD_HOST="$(echo "$config" | ${grep_bin} -e "^mpdserver=" | cut -d = -f 2- || echo localhost)"
             UsedGenre=$(${grep_bin} -c -e "@@@${ChosenGenre}" ${GenreLogFile} &)
             for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
             
