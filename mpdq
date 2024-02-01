@@ -217,9 +217,9 @@ function choose_next_song {
     SongFileToAdd=""
     GenreNumber=""
     OkayGenre=""
-    #get random number for genre
     
-
+    
+    #get random number for genre
     GenreNumber=$(shuf -i 1-${NUMGENRES} -n 1)
     counter=1 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
  
