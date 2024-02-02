@@ -248,7 +248,8 @@ function choose_next_song {
             if [ ${InInstruction} -eq 0 ];then
                 CurrWeight=${DefaultPriority}
             else
-                CurrWeight=$(sed -n /"${GenreName}"/p "${InstructionFile}" | cut -d = -f 2-)
+                CurrWeight=$(sed -n /^"${GenreName}="/p "${InstructionFile}" | cut -d = -f 2-)
+                sed -n /^"${GenreName}="/p "${InstructionFile}" 
             fi
         else
             # this will take the default default priority of 1 for all genres if no instruction file foudn
