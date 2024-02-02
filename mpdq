@@ -240,9 +240,12 @@ function choose_next_song {
         GenreName=$(mpc list genre | head -n ${GenreNumber} | tail -n 1)
         loud "Examining ${GenreName}"
         # Genre name is just a straight search of the logfile, as the rotation should fix this
-        TimesPlayed=$(cat "${ConfigLogFile}" | grep -c -e "${GenreName}")
+        TimesPlayed=$(cat "${ConfigLogFile}" | grep -c -e "@${GenreName}")
         
-# This isn't working if default is 0...        
+# STill giving me some problems with spaces in genre names and matching with grep.
+# maybe sed??
+# CURRENT
+
         if [ -f "${InstructionFile}" ];then
             DefaultPriority=$(${grep_bin} -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
             InInstruction=$(${grep_bin} -c -e "${GenreName}" "${InstructionFile}")
