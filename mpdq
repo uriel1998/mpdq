@@ -234,11 +234,15 @@ function choose_next_song {
         GenreName=$(mpc list genre | head -n ${GenreNumber} | tail -n 1)
         # Genre name is just a straight search of the logfile, as the rotation should fix this
         TimesPlayed=$(cat "${ConfigLogFile}" | grep -c -e "${GenreName}")
-        InInstruction=$(${grep_bin} -c -e "${GenreName}" "${InstructionFile}")
-        if [ ${InInstruction} -eq 0 ];then
-            CurrWeight=${DefaultPriority}
+        if [ -f "${InstructionFile}" ];then
+            InInstruction=$(${grep_bin} -c -e "${GenreName}" "${InstructionFile}")
+            if [ ${InInstruction} -eq 0 ];then
+                CurrWeight=${DefaultPriority}
+            else
+                CurrWeight=$(${grep_bin} -e "${GenreName}" "${InstructionFile}" | cut -d = -f 2-)
+            fi
         else
-            CurrWeight=$(${grep_bin} -e "${GenreName}" "${InstructionFile}" | cut -d = -f 2-)
+            CurrWeight=${DefaultPriority}
         fi
         if [ ${TimesPlayed} -lt ${CurrWeight} ];then
             # Use shuf to get us a random song from that genre
