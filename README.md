@@ -83,6 +83,8 @@ rotate_time=1
 # in minutes
 album_mins=30
 artist_mins=30
+# Genres to exclude from the above two checks
+genres_exclude_album_check=Sound Clip,Classical
 musicinfo=/usr/bin/ffprobe
 ```
 
@@ -96,6 +98,10 @@ how often each genre will be played.
 `album_mins` and `artist_mins` will *separately* define the minimum interval 
 *in minutes* before a specific album or artist will be played again.  This should 
 be shorter than `rotate_time`.
+
+`genres_exclude_album_check` is a list of genres where the `album_mins` and `artist_mins` 
+checks will be *disabled*, for example, if you have a genre with only one or two artists or
+albums in it.
 
 ### Instruction files
 
