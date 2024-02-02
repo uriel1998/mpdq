@@ -240,25 +240,24 @@ function choose_next_song {
         GenreName=$(mpc list genre | head -n ${GenreNumber} | tail -n 1)
         loud "Examining ${GenreName}"
         # Genre name is just a straight search of the logfile, as the rotation should fix this
-        TimesPlayed=$(cat "${ConfigLogFile}" | grep -c -e "@${GenreName}")
-        
-# STill giving me some problems with spaces in genre names and matching with grep.
-# maybe sed??
-# CURRENT
-
+        TimesPlayed=$(cat "${ConfigLogFile}" | sed -n /"${GenreName}"/p "${InstructionFile}" | wc -l)
         if [ -f "${InstructionFile}" ];then
             DefaultPriority=$(${grep_bin} -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
-            InInstruction=$(${grep_bin} -c -e "${GenreName}" "${InstructionFile}")
+            # switched to sed & wc -l due to spaces and stuff
+            InInstruction=$(sed -n /"${GenreName}"/p "${InstructionFile}" "${InstructionFile}" | wc -l)
             if [ ${InInstruction} -eq 0 ];then
                 CurrWeight=${DefaultPriority}
             else
-                CurrWeight=$(${grep_bin} -e "${GenreName}" "${InstructionFile}" | cut -d = -f 2-)
+                CurrWeight=$(sed -n /"${GenreName}"/p "${InstructionFile}" | cut -d = -f 2-)
             fi
         else
             # this will take the default default priority of 1 for all genres if no instruction file foudn
             CurrWeight=${DefaultPriority}
         fi
         loud "Default ${DefaultPriority} :: Played ${TimesPlayed} :: Weight ${CurrWeight}"
+        
+        # does this need to be changed to a > ??? with quotes?
+        
         if [[ ${TimesPlayed} -lt ${CurrWeight} ]];then
             # Use shuf to get us a random song from that genre
             evalstring=$(printf "mpc --host %s --port %s find genre \"%s\" | shuf -n1" "${MPD_HOST}" "${MPD_PORT}" "${GenreName}" )
@@ -326,7 +325,7 @@ function choose_next_song {
         fi
     done    
     IFS=$OIFS
-
+#TODO - What happens if it maxes the counter ( -- maybe reset the logfiles?)
 }
 
 
