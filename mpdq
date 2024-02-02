@@ -221,18 +221,20 @@ function choose_next_song {
     OkayGenre=""
     
     
-    #get random number for genre
-    GenreNumber=$(shuf -i 1-${NUMGENRES} -n 1)
+
     counter=1 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
  
     loud "Using instruction file at ${InstructionFile}"
     while [ -z "${OkayGenre}" ] && [ ${counter} -lt ${NUMGENRES} ] 
     do
+        loud "Search run ${counter} of ${NUMGENRES}"
         TimesPlayed=""
         InInstruction=""
         GenreName=""
         CurrWeight=""
 
+        #get random number for genre
+        GenreNumber=$(shuf -i 1-${NUMGENRES} -n 1)
         GenreName=$(mpc list genre | head -n ${GenreNumber} | tail -n 1)
         # Genre name is just a straight search of the logfile, as the rotation should fix this
         TimesPlayed=$(cat "${ConfigLogFile}" | grep -c -e "${GenreName}")
@@ -309,6 +311,7 @@ function choose_next_song {
             OkayGenre="${GenreName}"
         else
             loud "Iteration!"
+            ((counter++))
         fi
     done    
 }
