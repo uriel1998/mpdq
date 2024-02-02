@@ -223,8 +223,7 @@ function choose_next_song {
     
 
     counter=1 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
- 
-    loud "Using instruction file at ${InstructionFile}"
+
     while [ -z "${OkayGenre}" ] && [ ${counter} -lt ${NUMGENRES} ] 
     do
         loud "Search run ${counter} of ${NUMGENRES}"
@@ -238,7 +237,10 @@ function choose_next_song {
         GenreName=$(mpc list genre | head -n ${GenreNumber} | tail -n 1)
         # Genre name is just a straight search of the logfile, as the rotation should fix this
         TimesPlayed=$(cat "${ConfigLogFile}" | grep -c -e "${GenreName}")
+        
+# This isn't working if default is 0...        
         if [ -f "${InstructionFile}" ];then
+            DefaultPriority=$(${grep_bin} -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
             InInstruction=$(${grep_bin} -c -e "${GenreName}" "${InstructionFile}")
             if [ ${InInstruction} -eq 0 ];then
                 CurrWeight=${DefaultPriority}
@@ -246,8 +248,10 @@ function choose_next_song {
                 CurrWeight=$(${grep_bin} -e "${GenreName}" "${InstructionFile}" | cut -d = -f 2-)
             fi
         else
+            # this will take the default default priority of 1 for all genres if no instruction file foudn
             CurrWeight=${DefaultPriority}
         fi
+        loud "Default ${DefaultPriority} :: Played ${TimesPlayed} :: Weight ${CurrWeight}"
         if [ ${TimesPlayed} -lt ${CurrWeight} ];then
             # Use shuf to get us a random song from that genre
             evalstring=$(printf "mpc --host %s --port %s find genre \"%s\" | shuf -n1" "${MPD_HOST}" "${MPD_PORT}" "${GenreName}" )
@@ -320,7 +324,7 @@ function choose_next_song {
 
 function need_next_song {
     SongFileToAdd=""
-
+    loud "Using instruction file at ${InstructionFile}"
     #until it returns a valid match
     while [ -z "$SongFileToAdd" ];do
         choose_next_song
