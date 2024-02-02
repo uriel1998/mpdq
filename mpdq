@@ -107,11 +107,11 @@ function init_config() {
         mkdir -p "$ConfigDir"
     fi
     if [ ! -d "$StateDir" ];then
-        mkdir -p "$ConfigDir"
+        mkdir -p "$StateDir"
     fi
 
     if [ ! -d "$CacheDir" ];then
-        mkdir -p "$ConfigDir"
+        mkdir -p "$CacheDir"
     fi
     if [ -f "$ConfigLogFile" ];then 
         touch "$ConfigLogFile"
@@ -325,7 +325,6 @@ function need_next_song {
 function main {
 
     rotate_songlog
-    rotate_genrelog
     mpc --host $MPD_HOST --port $MPD_PORT --quiet consume on
     mpc --host $MPD_HOST --port $MPD_PORT --quiet random off
 
