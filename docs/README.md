@@ -192,7 +192,7 @@ to have happen.
 * repeat is **off**
 * consume is **on**
 
-If you toggle any of those, then 
+If you toggle any of those, then `mpdq` will do nothing (not even rotate the song log).
 
 ### Advanced Usage
 
