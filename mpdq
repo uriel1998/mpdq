@@ -298,7 +298,7 @@ function choose_next_song {
             if [ -f "${SongFile}" ];then  # if it hasn't been rejected
                 # Genres to omit from album/artist checking (because there's only a few in that genre)           
                 DontCheckAlbumOrArtistTime=$(sed -n /^genres_exclude_album_check=/p "${ConfigFile}" | cut -d = -f 2-)
-                if [[ $DontCheckAlbumOrArtistTime != *"${GenreName}" ]];then
+                if [[ $DontCheckAlbumOrArtistTime == *"${GenreName}" ]];then
                     currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
                     difftime=$(( "$ARTIST_MINS" * 60 )) #they're in minutes
                     difftime2=$(( "$ALBUM_MINS" * 60 )) #they're in minutes
