@@ -174,10 +174,16 @@ an identical music library structure.  For example, I use a shared NFS mount.
 the time specified in `mpdq.ini`.  It does *not* log songs played or added in 
 any other way.
 
+### Advanced Usage
+
+With single-run mode, `mpdq` reads from the instruction file with each run. This 
+means that you can create different instruction files and either copy them to 
+`default.cfg` or use the `-c` switch to change your upcoming (random-ish) music. 
+
 
 ## 7. TODO
  
-* Add loop back in
+* Add loop back in and utilize relay mechanism to change instruction file
 * Double-check time calculations, particularly for songs > 60m
 * Switch between loop mode and single-run mode
 * Add in what to do when all genres run through in logrotate timeperiod
