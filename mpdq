@@ -7,9 +7,6 @@
  #
  ########################################################################
 
-# TODO - remember to change default for LOUD back to 0 
-
-
 ########################################################################
 # Definitions
 ########################################################################
@@ -61,7 +58,10 @@ InstructionFile=""
 DefaultPriority=1
 NUMGENRES=""
 # noisy feedback or not?
-LOUD=1
+LOUD=0
+# if we have exhausted all available options, shorten logrotate time temporarily
+EMERGENCY_ROTATE=0
+
 
 ########################################################################
 # Temporary Directories
@@ -164,10 +164,15 @@ function read_variables() {
 }
 
 function rotate_songlog {
+    
     if [ -f "$ConfigLogFile" ];then
         tempfile=$(mktemp)
         currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
         difftime=$(( "$ROTATE_TIME" * 60 * 60 ))
+        # Cuts the diff time in quarter; should handle most cases
+        if [ ${EMERGENCY_ROTATE} -ne 0 ];then
+            difftime=$(( "$difftime" / 4 ))
+        fi
         hightime=$(( "$currenttime"-"$difftime" ))
         loud "Eliminating song log entries older than $ROTATE_TIME hours."
         #echo "$hightime / $difftime"
@@ -249,7 +254,6 @@ function choose_next_song {
                 CurrWeight=${DefaultPriority}
             else
                 CurrWeight=$(sed -n /^"${GenreName}="/p "${InstructionFile}" | cut -d = -f 2-)
-                sed -n /^"${GenreName}="/p "${InstructionFile}" 
             fi
         else
             # this will take the default default priority of 1 for all genres if no instruction file foudn
@@ -292,17 +296,21 @@ function choose_next_song {
                 SongFile=""
             fi
             if [ -f "${SongFile}" ];then  # if it hasn't been rejected
-                currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-                difftime=$(( "$ARTIST_MINS" * 60 )) #they're in minutes
-                difftime2=$(( "$ALBUM_MINS" * 60 )) #they're in minutes
-                hightime=$(( "$currenttime"-"$difftime" ))
-                hightime2=$(( "$currenttime"-"$difftime2" ))
-        
-                # because of quoting, artists with spaces may provide extra hits using grep counting.
-                # so we're going to use wc -l to count LINES returned which should hopefully help
-        
-                if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime' | grep -e "@${artist}@" | wc -l` > 0 ]];then echo "found in log ${artist}"; SongFile="";fi 
-                if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime2" '$1 > hightime' | grep -e "@#${album}@" | wc -l` > 0 ]] ;then echo "found in log ${album}"; SongFile="";fi
+                # Genres to omit from album/artist checking (because there's only a few in that genre)           
+                DontCheckAlbumOrArtistTime=$(sed -n /^genres_exclude_album_check=/p "${ConfigFile}" | cut -d = -f 2-)
+                if [[ $DontCheckAlbumOrArtistTime != *"${GenreName}" ]];then
+                    currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+                    difftime=$(( "$ARTIST_MINS" * 60 )) #they're in minutes
+                    difftime2=$(( "$ALBUM_MINS" * 60 )) #they're in minutes
+                    hightime=$(( "$currenttime"-"$difftime" ))
+                    hightime2=$(( "$currenttime"-"$difftime2" ))
+            
+                    # because of quoting, artists with spaces may provide extra hits using grep counting.
+                    # so we're going to use wc -l to count LINES returned which should hopefully help
+            
+                    if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime' | grep -e "@${artist}@" | wc -l` > 0 ]];then echo "Artist found in log: ${artist}"; SongFile="";fi 
+                    if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime2" '$1 > hightime' | grep -e "@#${album}@" | wc -l` > 0 ]] ;then echo "Album found in log: ${album}"; SongFile="";fi
+                fi
             fi           
         else 
             loud "Used up ${GenreName}"
@@ -323,6 +331,11 @@ function choose_next_song {
         else
             loud "Iteration!"
             ((counter++))
+        fi
+        if [ ${counter} -eq ${NUMGENRES} ];then
+            EMERGENCY_ROTATE=1
+            rotate_songlog
+            EMERGENCY_ROTATE=0
         fi
     done    
     IFS=$OIFS
@@ -385,7 +398,7 @@ read_variables
 while [ $# -gt 0 ]; do
 option="$1"
     case $option in
-        --loud) 
+        --loud|-l) 
             export LOUD=1
             shift
             ;;             
