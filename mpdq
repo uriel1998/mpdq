@@ -221,11 +221,14 @@ function choose_next_song {
     OkayGenre=""
     
     
-
+## NEED TO CHECK FOR SPLIT AND WHITESPACE FOR GENRE NAMES
     counter=1 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
 
     while [ -z "${OkayGenre}" ] && [ ${counter} -lt ${NUMGENRES} ] 
     do
+        OIFS=$IFS
+        IFS=$'\n'
+
         loud "Search run ${counter} of ${NUMGENRES}"
         TimesPlayed=""
         InInstruction=""
@@ -235,6 +238,7 @@ function choose_next_song {
         #get random number for genre
         GenreNumber=$(shuf -i 1-${NUMGENRES} -n 1)
         GenreName=$(mpc list genre | head -n ${GenreNumber} | tail -n 1)
+        loud "Examining ${GenreName}"
         # Genre name is just a straight search of the logfile, as the rotation should fix this
         TimesPlayed=$(cat "${ConfigLogFile}" | grep -c -e "${GenreName}")
         
@@ -252,7 +256,7 @@ function choose_next_song {
             CurrWeight=${DefaultPriority}
         fi
         loud "Default ${DefaultPriority} :: Played ${TimesPlayed} :: Weight ${CurrWeight}"
-        if [ ${TimesPlayed} -lt ${CurrWeight} ];then
+        if [[ ${TimesPlayed} -lt ${CurrWeight} ]];then
             # Use shuf to get us a random song from that genre
             evalstring=$(printf "mpc --host %s --port %s find genre \"%s\" | shuf -n1" "${MPD_HOST}" "${MPD_PORT}" "${GenreName}" )
             # Note to future self -- THIS MAY BORK WITHOUT A & AFTER EVALSTRING. MAYBE NOT.
@@ -318,6 +322,8 @@ function choose_next_song {
             ((counter++))
         fi
     done    
+    IFS=$OIFS
+
 }
 
 
