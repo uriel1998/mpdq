@@ -8,6 +8,11 @@ without relying on external services.
 
 ![mpdq in action](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq.gif "mpdq in action")
 
+### Change from prior versions! 
+
+The program has been rewritten for simplicity and to avoid subprocesses; each run 
+will add a configurable number of tracks to the queue. Adding a self-contained idle 
+loop is in the roadmap.
 
 ## Contents
  1. [About](#1-about)
@@ -33,12 +38,6 @@ with per-genre weighting and simple defaults.
 
 Because it uses `mpd`'s own data, new tracks and changes to your music library 
 will be incorporated when `mpd` is updated.
-
-### Change from prior versions! 
-
-The program has been rewritten for simplicity and to avoid subprocesses; each run 
-will add a configurable number of tracks to the queue. Adding a self-contained idle 
-loop is in the roadmap.
 
 ## 2. License
 
