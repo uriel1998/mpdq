@@ -179,10 +179,10 @@ function rotate_songlog {
 }
 
 function create_example(){
-    ExampleFile="$ConfigDir/example_instruction"
-    loud "Default=1" > "$ExampleFile"
-    mpc --host $MPD_HOST --port $MPD_PORT list genre | sed 's/$/=1/' >> "$ExampleFile"
-    loud "Example config placed at $ExampleFile"
+    ExampleFile="$ConfigDir/default_example.cfg"
+    loud "Default=1" > "${ExampleFile}"
+    mpc --host $MPD_HOST --port $MPD_PORT list genre | sed 's/$/=1/' >> "${ExampleFile}"
+    loud "Example config placed at ${ExampleFile}"
     exit
 }
 
@@ -225,7 +225,7 @@ function choose_next_song {
     GenreNumber=$(shuf -i 1-${NUMGENRES} -n 1)
     counter=1 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
  
-    
+    loud "Using instruction file at ${InstructionFile}"
     while [ -z "${OkayGenre}" ] && [ ${counter} -lt ${NUMGENRES} ] 
     do
         TimesPlayed=""
@@ -288,8 +288,8 @@ function choose_next_song {
                 # because of quoting, artists with spaces may provide extra hits using grep counting.
                 # so we're going to use wc -l to count LINES returned which should hopefully help
         
-                if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime' | grep -e "${artist}" | wc -l` > 0 ]];then echo "found in log ${artist}"; SongFile="";fi 
-                if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime2" '$1 > hightime' | grep -e "${album}" | wc -l` > 0 ]] ;then echo "found in log ${album}"; SongFile="";fi
+                if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime' | grep -e "@${artist}@" | wc -l` > 0 ]];then echo "found in log ${artist}"; SongFile="";fi 
+                if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime2" '$1 > hightime' | grep -e "@#${album}@" | wc -l` > 0 ]] ;then echo "found in log ${album}"; SongFile="";fi
             fi           
         else 
             loud "Used up ${GenreName}"
@@ -302,7 +302,7 @@ function choose_next_song {
             SongFileToAdd="$SongFile"
             #mark that we used it.
             nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-            echo "$nowtime@@@${SongFileToAdd}@${GenreName}@${artist}@${album}" >> "$ConfigLogFile"
+            echo "$nowtime@@@${SongFileToAdd}@${GenreName}@${artist}@#${album}" >> "$ConfigLogFile"
             loud "Adding song from ${album} by ${artist} in the ${GenreName} genre."
                 
             # at end to close out do-while loop
@@ -408,7 +408,11 @@ echo "$$" >> /tmp/mpdq.pid
 # rotation now included in loop.
 # read_instructions -- do we need to anymore? NOPE.
 # determine_genre_weights -- don't need either
-
+if [ ! -f "${InstructionFile}" ];then
+    if [ -f "${ConfigDir}/default.cfg" ];then
+        InstructionFile="${ConfigDir}/default.cfg"
+    fi
+fi
 main
 
 rm -rf /tmp/mpdq.pid
