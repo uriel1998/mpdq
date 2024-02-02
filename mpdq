@@ -246,12 +246,11 @@ function choose_next_song {
         fi
         if [ ${TimesPlayed} -lt ${CurrWeight} ];then
             # Use shuf to get us a random song from that genre
-            echo "${GenreName}"
-            evalstring=$(printf "mpc --host %s --port %s find genre \"%s\" "${MPD_HOST}" "${MPD_PORT}" "${GenreName}" | shuf -n1" )
+            evalstring=$(printf "mpc --host %s --port %s find genre \"%s\" | shuf -n1" "${MPD_HOST}" "${MPD_PORT}" "${GenreName}" )
             echo "${evalstring}"
             read
             # Note to future self -- THIS MAY BORK WITHOUT A & AFTER EVALSTRING. MAYBE NOT.
-            SongStem=`${evalstring}`
+            SongStem=$(eval ${evalstring})
             # We will also use $SongFile as a continuing check 
             SongFile="$MPDBASE/$SongStem"
             #check selected song length
