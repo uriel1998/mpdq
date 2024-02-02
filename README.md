@@ -159,7 +159,8 @@ be applied to all genres.
 * -c : Which instruction file to use
 * -d : Override the default priority in the instruction file
 * -k : Kill a currently running `mpdq` process.
-* -e : Create an example instruction file at $XDG_STATE_HOME/mpdq/example_instruction.
+* -e : Create an example instruction file at $XDG_CONFIG_HOME/mpdq/example_instruction.
+* -f : Force MPD to have the right playback settings (see `Pausing the program` below).
 * -h : Show a short help message.
 * --loud: Give more feedback to terminal (yes, this means the default is quiet mode)  
 
@@ -178,6 +179,20 @@ an identical music library structure.  For example, I use a shared NFS mount.
 `mpdq` logs what songs it has played, and will not repeat the same song during 
 the time specified in `mpdq.ini`.  It does *not* log songs played or added in 
 any other way.
+
+### Pausing the program
+
+Whether being run in single-run mode or the (upcoming) ongoing loop mode, `mpdq` 
+will keep checking the queue and adding tracks, which isn't always what you want 
+to have happen. 
+
+`mpdq` will *not* add *any* tracks to the queue unless:
+
+* random is **off**
+* repeat is **off**
+* consume is **on**
+
+If you toggle any of those, then 
 
 ### Advanced Usage
 

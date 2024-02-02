@@ -99,6 +99,7 @@ function show_help {
     echo "  -k Kill existing mpdq process "
     echo "  -e Create example instruction file "
     echo "  -h Show this help message"
+    echo "  -f Force MPD to have the right playback settings"    
     echo "  --loud get more feedback on mpdq's execution"
 }
 
@@ -362,8 +363,7 @@ function need_next_song {
 function main {
 
     rotate_songlog
-    mpc --host $MPD_HOST --port $MPD_PORT --quiet consume on
-    mpc --host $MPD_HOST --port $MPD_PORT --quiet random off
+
 
     
     if [ -f ${RelayName} ];then 
@@ -420,6 +420,10 @@ option="$1"
             loud "${1} sent to mpdq relay file"
             exit
             ;;
+        -f)
+            mpc --host $MPD_HOST --port $MPD_PORT --quiet consume on
+            mpc --host $MPD_HOST --port $MPD_PORT --quiet random off        
+            ;;
         -k)
             already_running
             echo "kill" > ${RelayName}
@@ -429,6 +433,22 @@ option="$1"
             
     esac    
 done
+
+# switch off if not set -- whoops.  
+
+test_string=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1)
+echo "$test_string"
+# using xargs to strip whitespace here
+random=$(echo "${test_string}" | awk -F 'random: ' '{print $2}' | awk '{print $1}')
+repeat=$(echo "${test_string}" | awk -F 'repeat: ' '{print $2}' | awk '{print $1}')
+consume=$(echo "${test_string}" | awk -F 'consume: ' '{print $2}' | awk '{print $1}')
+if [ "$random" != "off" ] || [ "$repeat" != "off" ] || [ "$consume" != "on" ];then
+    loud "Aborting run due to MPD settings being"
+    loud "random: $random"
+    loud "repeat: $repeat"
+    loud "consume: $consume"
+    exit 97
+fi
 
 # Normal operation, so check for already running, then write our PID
 already_running
