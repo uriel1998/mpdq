@@ -34,8 +34,11 @@ with per-genre weighting and simple defaults.
 Because it uses `mpd`'s own data, new tracks and changes to your music library 
 will be incorporated when `mpd` is updated.
 
+### Change from prior versions! 
+
 The program has been rewritten for simplicity and to avoid subprocesses; each run 
-will add a configurable number of tracks to the queue.
+will add a configurable number of tracks to the queue. Adding a self-contained idle 
+loop is in the roadmap.
 
 ## 2. License
 
@@ -155,16 +158,17 @@ be applied to all genres.
 * -h : Show a short help message.
 * --loud: Give more feedback to terminal (yes, this means the default is quiet mode)  
 
-It should be run as a cronjob or the like.  There is not -- at this time -- an 
-idle loop (though I may add it after testing that this part works.)
-
+It should be run as a single run process or using the `watch` command (e.g. `watch -n 60 mpdq`).
 
 With each run, `mpdq` will add `queuesize` (from the ini file) tracks to MPD queue 
 and then exit.
 
+* If `mpdq.ini` is set up properly, you can even just do "random mode" by running `mpdq` by itself, and setting the frequency using `-d`.
+* If you've got `default.cfg` set up as well, you can just run `mpdq` with no switches.
+
 Because you define the hostname, it does *not* have to be on the same machine
 running MPD, but because it *does* check file existence, you'll have to have 
-an identical music library structure.
+an identical music library structure.  For example, I use a shared NFS mount.
 
 `mpdq` logs what songs it has played, and will not repeat the same song during 
 the time specified in `mpdq.ini`.  It does *not* log songs played or added in 
@@ -173,3 +177,8 @@ any other way.
 
 ## 7. TODO
  
+* Add loop back in
+* Double-check time calculations, particularly for songs > 60m
+* Switch between loop mode and single-run mode
+* Add in what to do when all genres run through in logrotate timeperiod
+* Lighterweight way to handle log rotation, since I'm calling it frequently?

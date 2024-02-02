@@ -367,7 +367,7 @@ function main {
 
 # TODO - change this into an idle loop.  Since we read the instructionfile 
 # dynamically now, it won't matter if we point it in a different direction through
-# the relay. Also will need to ensure the guidance is updated.
+# the relay.  
 
 
 }
@@ -419,8 +419,7 @@ already_running
 echo "$$" >> /tmp/mpdq.pid
 
 # rotation now included in loop.
-# read_instructions -- do we need to anymore? NOPE.
-# determine_genre_weights -- don't need either
+
 if [ ! -f "${InstructionFile}" ];then
     if [ -f "${ConfigDir}/default.cfg" ];then
         InstructionFile="${ConfigDir}/default.cfg"
