@@ -69,17 +69,17 @@ Place mpdq.ini in $XDG_CONFIG_HOME/mpdq
 
 ```
 [SERVER]
-musicdir = /directory/to/music
-mpdserver = localhost
-mpdport = 6600
-mpdpass = hackme
-songlength = 15
-queuesize = 10
+musicdir=/directory/to/music
+mpdserver=localhost
+mpdport=6600
+mpdpass=hackme
+songlength=15
+queuesize=10
 # in hours
-rotate_time = 1
+rotate_time=1
 # in minutes
-album_mins = 30
-artist_mins = 30
+album_mins=30
+artist_mins=30
 musicinfo=/usr/bin/ffprobe
 ```
 
