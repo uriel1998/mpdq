@@ -133,12 +133,9 @@ function read_variables() {
     MPD_PASS=$(echo "$config" | ${grep_bin} -e "^mpdpass=" | cut -d = -f 2-) &&
     MPD_HOST="$MPD_PASS@$MPD_HOST"
     MPD_PORT=$(echo "$config" | ${grep_bin} -e "^mpdport=" | cut -d = -f 2- || echo 6600)
-    echo "$config"
-    read
+ 
     if [[ `echo "$config" | ${grep_bin} -c -e "^queuesize="` > 0 ]];then PLAYLIST_TRIGGER=$(echo "$config" | ${grep_bin} -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
     if [[ `echo "$config" | ${grep_bin} -c -e "^rotate_time="` > 0 ]];then ROTATE_TIME=$(echo "$config" | ${grep_bin} -e "^rotate_time=" | cut -d = -f 2- );else ROTATE_TIME="8";fi
-    if [[ `echo "$config" | ${grep_bin} -c -e "^rotate_time="` > 0 ]];then echo "HILSLKJ:LEK"
-    fi
     if [[ `echo "$config" | ${grep_bin} -c -e "^album_mins="` > 0 ]];then ALBUM_MINS=$(echo "$config" | ${grep_bin} -e "^album_mins=" | cut -d = -f 2- );else ALBUM_MINS="15";fi
     if [[ `echo "$config" | ${grep_bin} -c -e "^artist_mins="` > 0 ]];then ARTIST_MINS=$(echo "$config" | ${grep_bin} -e "^artist_mins=" | cut -d = -f 2- );else ARTIST_MINS="15";fi    
     if [[ `echo "$config" | ${grep_bin} -c -e "^songlength="` > 0 ]];then SONGLENGTH=$(echo "$config" | ${grep_bin} -e "^songlength=" | cut -d = -f 2- );else SONGLENGTH="15";fi
