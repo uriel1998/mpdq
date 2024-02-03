@@ -277,13 +277,13 @@ function choose_next_song {
 #TODO: Double check time matching; the logic may be letting songs > 1hr play.
             case ${MUSICINFO} in
                 *exiftool)
-                    length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' )
+                    length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | ${grep_bin} "Duration" | awk -F ':' '{sum += 60*60*$1} {sum += 60*$2 } {sum += $3} END {print sum}' )
                     album=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "Album" | head -1 | cut -d : -f 2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
                     artist=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "Artist" | head -1 |  cut -d : -f 2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
                     ;;
                 *ffprobe)
                     # Why the & at the end is needed for ffprobe ONLY is beyond me...
-                    length=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "Duration" | awk -F ':' '$2 != /.0/ {sum += 60*$2 } {sum += $3} END {print sum}' & )
+                    length=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "Duration" | awk -F ':' '{sum += 60*60*$1} {sum += 60*$2 } {sum += $3} END {print sum}' & )
                     album=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "album" | head -1 | cut -d : -f 2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
                     artist=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "artist" | head -1 | cut -d : -f 2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
                     ;;
