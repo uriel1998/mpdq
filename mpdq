@@ -498,6 +498,7 @@ while read -r line; do
     done
 done < <(mpc --host $MPD_HOST --port $MPD_PORT list genre)
 
+
 main
 
 rm -rf /tmp/mpdq.pid
