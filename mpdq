@@ -241,6 +241,9 @@ function choose_next_song {
         GenreName=""
         CurrWeight=""
 
+        # need to read in an array of genres to weight; will be its own function
+        # we could read in an array like we did with the old version, I guess.
+
         #get random number for genre
         GenreNumber=$(shuf -i 1-${NUMGENRES} -n 1)
         GenreName=$(mpc list genre | head -n ${GenreNumber} | tail -n 1)
