@@ -203,7 +203,9 @@ means that you can create different instruction files and either copy them to
 
 ## 7. TODO
  
-* Check for album artist when artist is not present or empty
+ 
+ 
+
 * Add loop back in and utilize relay mechanism to change instruction file
 * Switch between loop mode and single-run mode
 * Add in what to do when all genres run through in logrotate timeperiod

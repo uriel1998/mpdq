@@ -1,0 +1,80 @@
+SCRIPT=$0
+InstructionFile=""
+DefaultPriority=1
+tmp2=$(mktemp)
+
+ModGenre=()
+ModValue=()
+GenreWeight=()
+ChooseGenre=()
+SONGLENGTH=10
+
+# initialize choosing array (this will be called from a function, so it can be 
+# easily added in from relay when we loop the process).
+# get default weight
+# go through list of genres from mpc/mpd
+    # is it in our instruction file?
+        # if not, weight=default
+        # if so, weight=value from instruction file
+        # i = 0; while i until $weight;do
+        # add element to choosing array with GenreName
+        # done
+        
+# in choosing section, get rand# then choose that element. BOSH, done.
+
+                ModGenre+=("${IGenre}")
+
+
+
+
+
+function determine_genre_weights {
+    #This is not light, but it's only done once a run.
+    #loop through genre, if not in array ModGenre, then apply DefaultWeight
+
+    TotalNumSongs=$(mpc --host $MPD_HOST --port $MPD_PORT listall | wc -l)
+    for ((i = 0; i < ${#Genre[@]}; i++));do
+        #determine weight of genre in music directory
+        if [[ "${MODE}" =~ "song" ]];then
+            GenreNumSongs[$i]=$(mpc --host $MPD_HOST --port $MPD_PORT find genre "${Genre[$i]}" | wc -l)
+        
+            GenreSongWeight[$i]=$(printf "%.0f\n" `echo "(${GenreNumSongs[$i]} / $TotalNumSongs)*1000" | bc -l`)
+            if [ ${GenreSongWeight[$i]} = 0 ];then
+                GenreSongWeight[$i]=1
+            fi
+        
+            for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
+                if [[ "${Genre[$i]}" = "${ModGenre[$i2]}" ]];then
+                    GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${ModValue[$i2]}" | bc -l`)
+                    #GenreWeight[$i]=$(echo "${ModValue[$i2]}")
+                    break
+                else
+                    GenreWeight[$i]=$(printf "%.0f\n" `echo "${GenreSongWeight[$i]} * ${DefaultWeight}" | bc -l`)
+                fi
+            done
+        else    # regular weighting without number of songs
+            for (( i2 = 0; i2 < ${#ModGenre[@]}; i2++ ));do
+                if [[ "${Genre[$i]}" = "${ModGenre[$i2]}" ]];then
+                    GenreWeight[$i]=$(echo "${ModValue[$i2]}")
+                fi
+            done
+        fi
+        if [ -z ${GenreWeight[$i]} ];then
+            GenreWeight[$i]=${DefaultWeight}
+        fi
+        loud "${Genre[$i]} - ${GenreWeight[$i]}"
+    done
+
+    #populating the "weighted" array
+    #add the name GenreWeight times... giving us a sloppy weighting mechanism (and if it's zero, it SHOULD exit before hitting this)
+    for (( i = 0; i < ${#Genre[@]}; i++));do
+        if [[ ! -z "${GenreWeight[$i]}" ]];then
+            for (( i2 = 1; "$i2" <= "${GenreWeight[$i]}"; i2++ ));do
+                if [ "${GenreWeight[$i]}" != "0" ]; then
+                    ChooseGenre+=("${Genre[$i]}")
+                fi
+            done
+        fi
+    done
+}
+
