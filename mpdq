@@ -30,11 +30,9 @@ RelayName=${StateDir}/mpdq_cmd
 # This file will contain time song was played, its filename, the album, and artist
 ConfigLogFile=${StateDir}/playedsongs.log
 
-
+# Global variables 
 export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
- 
 grep_bin=$(which grep)
-
 MPDBASE=""
 MPD_HOST=""
 MPD_PASS=""
@@ -61,6 +59,8 @@ NUMGENRES=""
 LOUD=0
 # if we have exhausted all available options, shorten logrotate time temporarily
 EMERGENCY_ROTATE=0
+# initialize choosing array 
+ModGenre=()
 
 
 ########################################################################
@@ -219,6 +219,50 @@ function read_our_relay {
     esac
 }
 
+
+function weight_genre_array() {
+    
+# called from a function so it can be called as needed from a relay command as well
+
+# easily added in from relay when we loop the process).
+# get default weight
+
+# If no instruction file, it's already set at the top of the program.
+# also there is no point in doing any checks if the file doesn't exist!
+if [ -f "${InstructionFile}" ];then
+    DefaultPriority=$(${grep_bin} -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
+fi 
+
+
+# go through list of genres from mpc/mpd
+    # is it in our instruction file?
+        # if not, weight=default
+        # if so, weight=value from instruction file
+        # i = 0; while i until $weight;do
+        # add element to choosing array with GenreName
+        # done
+
+
+
+
+    # switched to sed & wc -l due to spaces and stuff
+#    InInstruction=$(sed -n /"${GenreName}"/p "${InstructionFile}" "${InstructionFile}" | wc -l)
+    #if [ ${InInstruction} -eq 0 ];then
+     #   CurrWeight=${DefaultPriority}
+    #else
+        #CurrWeight=$(sed -n /^"${GenreName}="/p "${InstructionFile}" | cut -d = -f 2-)
+    #fi
+#else
+    ## this will take the default default priority of 1 for all genres if no instruction file foudn
+    #CurrWeight=${DefaultPriority}
+
+        
+# in choosing section, get rand# then choose that element. BOSH, done.
+
+     #           ModGenre+=("${IGenre}")
+
+    
+}
 
 function choose_next_song {
  
