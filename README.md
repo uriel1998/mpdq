@@ -126,6 +126,12 @@ In the example above, all genres will be played a maximum of *1* time per `rotat
 except Rock, which *may* be played *up to* three times per `rotate_time`, and Classical, 
 which will *never* be played per `rotate_time`. 
 
+Additionally, the weight will *increase* the chances of that genre being selected; 
+it increases the number of chances of that genre being *selected* as well as the 
+maximum number of times per `rotate_time`. Without that, the playlists are *very* 
+eclectic at first, then slowly get more and more homogenous, which isn't what we 
+want here.
+
 This allows for both very eclectic selections (as with the example above) or 
 very focused selections, such as with the example below:
 
@@ -203,9 +209,6 @@ means that you can create different instruction files and either copy them to
 
 ## 7. TODO
  
- 
- 
-
 * Add loop back in and utilize relay mechanism to change instruction file
 * Switch between loop mode and single-run mode
 * Add in what to do when all genres run through in logrotate timeperiod
