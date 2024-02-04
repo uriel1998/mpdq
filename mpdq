@@ -60,7 +60,7 @@ LOUD=0
 # if we have exhausted all available options, shorten logrotate time temporarily
 EMERGENCY_ROTATE=0
 # initialize choosing array 
-ModGenre=()
+ChooseGenre=""
 
 
 ########################################################################
@@ -135,15 +135,15 @@ function read_variables() {
     MPD_HOST="$MPD_PASS@$MPD_HOST"
     MPD_PORT=$(echo "$config" | ${grep_bin} -e "^mpdport=" | cut -d = -f 2- || echo 6600)
  
-    if [[ `echo "$config" | ${grep_bin} -c -e "^queuesize="` > 0 ]];then PLAYLIST_TRIGGER=$(echo "$config" | ${grep_bin} -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
-    if [[ `echo "$config" | ${grep_bin} -c -e "^rotate_time="` > 0 ]];then ROTATE_TIME=$(echo "$config" | ${grep_bin} -e "^rotate_time=" | cut -d = -f 2- );else ROTATE_TIME="8";fi
-    if [[ `echo "$config" | ${grep_bin} -c -e "^album_mins="` > 0 ]];then ALBUM_MINS=$(echo "$config" | ${grep_bin} -e "^album_mins=" | cut -d = -f 2- );else ALBUM_MINS="15";fi
-    if [[ `echo "$config" | ${grep_bin} -c -e "^artist_mins="` > 0 ]];then ARTIST_MINS=$(echo "$config" | ${grep_bin} -e "^artist_mins=" | cut -d = -f 2- );else ARTIST_MINS="15";fi    
-    if [[ `echo "$config" | ${grep_bin} -c -e "^songlength="` > 0 ]];then SONGLENGTH=$(echo "$config" | ${grep_bin} -e "^songlength=" | cut -d = -f 2- );else SONGLENGTH="15";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^queuesize="` -gt 0 ]];then PLAYLIST_TRIGGER=$(echo "$config" | ${grep_bin} -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^rotate_time="` -gt 0 ]];then ROTATE_TIME=$(echo "$config" | ${grep_bin} -e "^rotate_time=" | cut -d = -f 2- );else ROTATE_TIME="8";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^album_mins="` -gt 0 ]];then ALBUM_MINS=$(echo "$config" | ${grep_bin} -e "^album_mins=" | cut -d = -f 2- );else ALBUM_MINS="15";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^artist_mins="` -gt 0 ]];then ARTIST_MINS=$(echo "$config" | ${grep_bin} -e "^artist_mins=" | cut -d = -f 2- );else ARTIST_MINS="15";fi    
+    if [[ `echo "$config" | ${grep_bin} -c -e "^songlength="` -gt 0 ]];then SONGLENGTH=$(echo "$config" | ${grep_bin} -e "^songlength=" | cut -d = -f 2- );else SONGLENGTH="15";fi
 
     
     # Determining where/how to assess song length
-    if [[ `echo "$config" | ${grep_bin} -c -e "^musicinfo="` > 0 ]];then 
+    if [[ `echo "$config" | ${grep_bin} -c -e "^musicinfo="` -gt 0 ]];then 
         MUSICINFO=$(echo "$config" | ${grep_bin} -e "^musicinfo=" | cut -d = -f 2- )
     else 
         if [ -f $(which ffprobe) ];then
@@ -219,50 +219,40 @@ function read_our_relay {
     esac
 }
 
-
-function weight_genre_array() {
+function populate_array () {
     
-# called from a function so it can be called as needed from a relay command as well
-
-# easily added in from relay when we loop the process).
-# get default weight
-
-# If no instruction file, it's already set at the top of the program.
-# also there is no point in doing any checks if the file doesn't exist!
-if [ -f "${InstructionFile}" ];then
-    DefaultPriority=$(${grep_bin} -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
-fi 
-
-
-# go through list of genres from mpc/mpd
-    # is it in our instruction file?
-        # if not, weight=default
-        # if so, weight=value from instruction file
-        # i = 0; while i until $weight;do
-        # add element to choosing array with GenreName
-        # done
-
-
-
-
-    # switched to sed & wc -l due to spaces and stuff
-#    InInstruction=$(sed -n /"${GenreName}"/p "${InstructionFile}" "${InstructionFile}" | wc -l)
-    #if [ ${InInstruction} -eq 0 ];then
-     #   CurrWeight=${DefaultPriority}
-    #else
-        #CurrWeight=$(sed -n /^"${GenreName}="/p "${InstructionFile}" | cut -d = -f 2-)
-    #fi
-#else
-    ## this will take the default default priority of 1 for all genres if no instruction file foudn
-    #CurrWeight=${DefaultPriority}
-
-        
-# in choosing section, get rand# then choose that element. BOSH, done.
-
-     #           ModGenre+=("${IGenre}")
-
-    
+    if [ -f "${InstructionFile}" ];then
+        DefaultPriority=$(${grep_bin} -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
+    fi 
+  
+# TODO -- IT IS NOT PASSING THE VARIABLE BACK OUT OF THE LAST DO WHILE LOOP  
+    loud "Loading instruction file commands"
+    ChooseGenre=""
+    # go through list of genres from mpc/mpd
+    mpc --host $MPD_HOST --port $MPD_PORT list genre | while read -r line; do    
+        # is it in our instruction file?
+        CG="${line}"
+        InInstruction=$(sed -n /"${CG}"/p "${InstructionFile}" "${InstructionFile}" | wc -l)
+        if [ ${InInstruction} -eq 0 ];then
+            # if not, weight=default
+            CurrWeight=${DefaultPriority}
+        else
+            # if so, weight=value from instruction file    
+            CurrWeight=$(sed -n /^"${CG}="/p "${InstructionFile}" | cut -d = -f 2-)
+        fi
+        i=1
+        # adds genre name to the array a number of times equal to the weight, so the RNG
+        # has more of a chance to select it.
+        loud "Adding ${CurrWeight}:${CG}"
+        while [ $i -le $CurrWeight ];do
+            ChooseGenre=$(printf "%s %s" "${ChooseGenre}" "${line}")
+            echo "${ChooseGenre}"
+            ((i++))
+        done
+    done
+    echo "${ChooseGenre}"
 }
+
 
 function choose_next_song {
  
@@ -284,13 +274,10 @@ function choose_next_song {
         InInstruction=""
         GenreName=""
         CurrWeight=""
-
-        # need to read in an array of genres to weight; will be its own function
-        # we could read in an array like we did with the old version, I guess.
-
+        # changing this to checking our array --  bot with number and what variable it spits back       
         #get random number for genre
-        GenreNumber=$(shuf -i 1-${NUMGENRES} -n 1)
-        GenreName=$(mpc list genre | head -n ${GenreNumber} | tail -n 1)
+        GenreNumber=$(shuf -i 1-${#ChooseGenre[@]} -n 1)            
+        GenreName="${ChooseGenre[$GenreNumber]}"
         loud "Examining ${GenreName}"
         # Genre name is just a straight search of the logfile, as the rotation should fix this
         TimesPlayed=$(cat "${ConfigLogFile}" | sed -n /"${GenreName}"/p "${InstructionFile}" | wc -l)
@@ -367,8 +354,8 @@ function choose_next_song {
                     # because of quoting, artists with spaces may provide extra hits using grep counting.
                     # so we're going to use wc -l to count LINES returned which should hopefully help
             
-                    if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime' | grep -e "@${artist}@" | wc -l` > 0 ]];then echo "Artist found in log: ${artist}"; SongFile="";fi 
-                    if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime2" '$1 > hightime' | grep -e "@#${album}@" | wc -l` > 0 ]] ;then echo "Album found in log: ${album}"; SongFile="";fi
+                    if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime' | grep -e "@${artist}@" | wc -l` > -gt ]];then echo "Artist found in log: ${artist}"; SongFile="";fi 
+                    if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime2" '$1 > hightime' | grep -e "@#${album}@" | wc -l` -gt 0 ]] ;then echo "Album found in log: ${album}"; SongFile="";fi
                 fi
             fi           
         else 
@@ -493,9 +480,7 @@ option="$1"
 done
 
 # switch off if not set -- whoops.  
-
 test_string=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1)
-echo "$test_string"
 # using xargs to strip whitespace here
 random=$(echo "${test_string}" | awk -F 'random: ' '{print $2}' | awk '{print $1}')
 repeat=$(echo "${test_string}" | awk -F 'repeat: ' '{print $2}' | awk '{print $1}')
@@ -519,6 +504,13 @@ if [ ! -f "${InstructionFile}" ];then
         InstructionFile="${ConfigDir}/default.cfg"
     fi
 fi
+
+
+populate_array
+
+exit
+
+echo "${ChooseGenre[*]}"
 main
 
 rm -rf /tmp/mpdq.pid
