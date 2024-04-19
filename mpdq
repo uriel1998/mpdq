@@ -340,14 +340,16 @@ function choose_next_song {
                     currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
                     difftime=$(( "$ARTIST_MINS" * 60 )) #they're in minutes
                     difftime2=$(( "$ALBUM_MINS" * 60 )) #they're in minutes
+                    # No need for difftime3 - it's literally the entire file
                     hightime=$(( "$currenttime"-"$difftime" ))
                     hightime2=$(( "$currenttime"-"$difftime2" ))
             
                     # because of quoting, artists with spaces may provide extra hits using grep counting.
                     # so we're going to use wc -l to count LINES returned which should hopefully help
             
-                    if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime' | grep -e "@${artist}@" | wc -l` > -gt ]];then echo "Artist found in log: ${artist}"; SongFile="";fi 
-                    if [[ `cat "$ConfigLogFile" | awk -F '@@@' -v hightime="$hightime2" '$1 > hightime' | grep -e "@#${album}@" | wc -l` -gt 0 ]] ;then echo "Album found in log: ${album}"; SongFile="";fi
+                    if [[ `cat "$ConfigLogFile2" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime' | grep -e "@${artist}@" | wc -l` > -gt ]];then echo "Artist found in log: ${artist}"; SongFile="";fi 
+                    if [[ `cat "$ConfigLogFile2" | awk -F '@@@' -v hightime="$hightime2" '$1 > hightime' | grep -e "@#${album}@" | wc -l` -gt 0 ]] ;then echo "Album found in log: ${album}"; SongFile="";fi
+                    if [[ `cat "$ConfigLogFile2" | grep -e "@#${SongFile}@" | wc -l` -gt 0 ]] ;then echo "Song found in log: ${album}"; SongFile="";fi
                 fi
             fi           
         else 
@@ -362,6 +364,7 @@ function choose_next_song {
             #mark that we used it.
             nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
             echo "$nowtime@@@${SongFileToAdd}@${GenreName}@${artist}@#${album}" >> "$ConfigLogFile"
+            echo "$nowtime@@@${SongFileToAdd}@${GenreName}@${artist}@#${album}" >> "$ConfigLogFile2"
             loud "Adding song from ${album} by ${artist} in the ${GenreName} genre."
                 
             # at end to close out do-while loop
