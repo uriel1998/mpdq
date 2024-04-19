@@ -29,6 +29,7 @@ ConfigFile=${ConfigDir}/mpdq.ini
 RelayName=${StateDir}/mpdq_cmd
 # This file will contain time song was played, its filename, the album, and artist
 ConfigLogFile=${StateDir}/playedsongs.log
+ConfigLogFile2=${StateDir}/playedsongs2.log
 
 # Global variables 
 export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
@@ -41,8 +42,12 @@ MPD_PORT=""
 PLAYLIST_TRIGGER=""
 # How long before a song/genre gets purged from the log, IN HOURS
 ROTATE_TIME=""
+# Longest time to not hear a song again. Must be LONGER than MAXIMUM "no repeat" 
+# time for album and artist
+NOREPLAY_ROTATE_TIME=""
 # How long before a particular album or artist can be played again. SEPARATE
-# from the main log, and should be SHORTER. IN MINUTES  These will be checked 
+# from the main log, and should be SHORTER than NO_REPLAY_TIME. IN MINUTES  These 
+# will be checked 
 # dynamically against the current logfile for thier individual time periods.
 ALBUM_MINS=""
 ARTIST_MINS=""
@@ -114,9 +119,13 @@ function init_config() {
     if [ ! -d "$CacheDir" ];then
         mkdir -p "$CacheDir"
     fi
-    if [ -f "$ConfigLogFile" ];then 
+    if [ ! -f "$ConfigLogFile" ];then 
         touch "$ConfigLogFile"
     fi
+    if [ ! -f "$ConfigLogFile2" ];then 
+        touch "$ConfigLogFile2"
+    fi
+
 }
 
 function read_variables() {
@@ -137,6 +146,7 @@ function read_variables() {
  
     if [[ `echo "$config" | ${grep_bin} -c -e "^queuesize="` -gt 0 ]];then PLAYLIST_TRIGGER=$(echo "$config" | ${grep_bin} -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
     if [[ `echo "$config" | ${grep_bin} -c -e "^rotate_time="` -gt 0 ]];then ROTATE_TIME=$(echo "$config" | ${grep_bin} -e "^rotate_time=" | cut -d = -f 2- );else ROTATE_TIME="8";fi
+    if [[ `echo "$config" | ${grep_bin} -c -e "^no_replay_rotate="` -gt 0 ]];then NOREPLAY_ROTATE_TIME=$(echo "$config" | ${grep_bin} -e "^no_replay_rotate=" | cut -d = -f 2- );else NOREPLAY_ROTATE_TIME="8";fi
     if [[ `echo "$config" | ${grep_bin} -c -e "^album_mins="` -gt 0 ]];then ALBUM_MINS=$(echo "$config" | ${grep_bin} -e "^album_mins=" | cut -d = -f 2- );else ALBUM_MINS="15";fi
     if [[ `echo "$config" | ${grep_bin} -c -e "^artist_mins="` -gt 0 ]];then ARTIST_MINS=$(echo "$config" | ${grep_bin} -e "^artist_mins=" | cut -d = -f 2- );else ARTIST_MINS="15";fi    
     if [[ `echo "$config" | ${grep_bin} -c -e "^songlength="` -gt 0 ]];then SONGLENGTH=$(echo "$config" | ${grep_bin} -e "^songlength=" | cut -d = -f 2- );else SONGLENGTH="15";fi
@@ -182,6 +192,23 @@ function rotate_songlog {
     else
         touch "$ConfigLogFile"
     fi
+    if [ -f "$ConfigLogFile2" ];then
+        tempfile=$(mktemp)
+        currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+        difftime=$(( "$NOREPLAY_ROTATE_TIME" * 60 * 60 ))
+        # Cuts the diff time in quarter; should handle most cases
+        if [ ${EMERGENCY_ROTATE} -ne 0 ];then
+            difftime=$(( "$difftime" / 4 ))
+        fi
+        hightime=$(( "$currenttime"-"$difftime" ))
+        loud "Eliminating song log entries older than $ROTATE_TIME hours."
+        #echo "$hightime / $difftime"
+        cat "$ConfigLogFile2" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
+        mv -f "$tempfile" "$ConfigLogFile2"
+    else
+        touch "$ConfigLogFile2"
+    fi
+    
 }
 
 function create_example(){
