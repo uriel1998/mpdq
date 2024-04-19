@@ -91,12 +91,16 @@ musicinfo=/usr/bin/ffprobe
 
 ### From the INI file
 
-`rotate_time` in the ini file defines how long mpdq keeps a log for in hours -- and helps define 
-how often each genre will be played.  
+`rotate_time` in the ini file defines how long mpdq keeps a log for in hours -- 
+and helps define how often each genre will be played.  
+
+`no_replay_rotate` in the ini file defines how long you will *not* hear a particular 
+track again in hours, like how radio stations used to promise you wouldn't hear 
+the same song twice in a workday. This checks the *track filename* not the *title*. 
 
 `album_mins` and `artist_mins` will *separately* define the minimum interval 
-*in minutes* before a specific album or artist will be played again.  This should 
-be shorter than `rotate_time`.
+*in minutes* before a specific album or artist will be played again.  These should 
+be shorter than `no_replay_rotate`.
 
 `genres_exclude_album_check` is a list of genres where the `album_mins` and `artist_mins` 
 checks will be *disabled*, for example, if you have a genre with only one or two artists or

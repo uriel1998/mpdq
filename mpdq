@@ -201,7 +201,7 @@ function rotate_songlog {
             difftime=$(( "$difftime" / 4 ))
         fi
         hightime=$(( "$currenttime"-"$difftime" ))
-        loud "Eliminating song log entries older than $ROTATE_TIME hours."
+        loud "Eliminating song log entries older than $NOREPLAY_ROTATE_TIME hours."
         #echo "$hightime / $difftime"
         cat "$ConfigLogFile2" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime'  > "$tempfile"
         mv -f "$tempfile" "$ConfigLogFile2"
@@ -504,7 +504,7 @@ if [ -f "${InstructionFile}" ];then
     DefaultPriority=$(${grep_bin} -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
 fi 
   
-  
+#TODO - This throws an error if "blues" is defined with default but Blues Rock is specified  
 loud "Loading instruction file commands"
 # go through list of genres from mpc/mpd
 while read -r line; do    
