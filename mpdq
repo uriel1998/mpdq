@@ -504,28 +504,21 @@ if [ -f "${InstructionFile}" ];then
     DefaultPriority=$(${grep_bin} -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
 fi 
   
-#TODO - This throws an error if "blues" is defined with default but Blues Rock is specified  
 loud "Loading instruction file commands"
 # go through list of genres from mpc/mpd
 while read -r line; do    
     # is it in our instruction file?
-    echo "############################"
     CG="${line}"
-    echo "${CG}"
     InInstruction=$(sed -n /^"${CG}"=/p "${InstructionFile}" "${InstructionFile}" | wc -l)
-    sed -n /"^${CG}"=/p "${InstructionFile}" "${InstructionFile}" 
-    echo "#$InInstruction#"
     if [ ${InInstruction} -eq 0 ];then
         # if not, weight=default
         CurrWeight=${DefaultPriority}
-        echo "DEFAULT"
     else
         # if so, weight=value from instruction file    
-        CurrWeight=$(sed -n /^"${CG}="/p "${InstructionFile}" | cut -d = -f 2-)
-        echo "FROM INSTRUCTION"
+        # tail included to catch in case there's a duplicate instruction, takes last
+        CurrWeight=$(sed -n /^"${CG}="/p "${InstructionFile}" | tail -n 1 |cut -d = -f 2-)
     fi
     i=1
-    echo "#${CurrWeight}#"
     # adds genre name to the array a number of times equal to the weight, so the RNG
     # has more of a chance to select it.
     loud "Adding ${CurrWeight}:${CG}"
