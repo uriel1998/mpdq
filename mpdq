@@ -509,16 +509,23 @@ loud "Loading instruction file commands"
 # go through list of genres from mpc/mpd
 while read -r line; do    
     # is it in our instruction file?
+    echo "############################"
     CG="${line}"
-    InInstruction=$(sed -n /"${CG}"/p "${InstructionFile}" "${InstructionFile}" | wc -l)
+    echo "${CG}"
+    InInstruction=$(sed -n /^"${CG}"=/p "${InstructionFile}" "${InstructionFile}" | wc -l)
+    sed -n /"^${CG}"=/p "${InstructionFile}" "${InstructionFile}" 
+    echo "#$InInstruction#"
     if [ ${InInstruction} -eq 0 ];then
         # if not, weight=default
         CurrWeight=${DefaultPriority}
+        echo "DEFAULT"
     else
         # if so, weight=value from instruction file    
         CurrWeight=$(sed -n /^"${CG}="/p "${InstructionFile}" | cut -d = -f 2-)
+        echo "FROM INSTRUCTION"
     fi
     i=1
+    echo "#${CurrWeight}#"
     # adds genre name to the array a number of times equal to the weight, so the RNG
     # has more of a chance to select it.
     loud "Adding ${CurrWeight}:${CG}"
