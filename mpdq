@@ -272,7 +272,7 @@ function choose_next_song {
         GenreName="${ChooseGenre[$GenreNumber]}"
         loud "Examining ${GenreName}"
         # Genre name is just a straight search of the logfile, as the rotation should fix this
-        TimesPlayed=$(cat "${ConfigLogFile}" | sed -n /"${GenreName}"/p "${InstructionFile}" | wc -l)
+        TimesPlayed=$(cat "${ConfigLogFile}" | sed -n /"@${GenreName}@"/p | wc -l)
         if [ -f "${InstructionFile}" ];then
             DefaultPriority=$(${grep_bin} -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
             # switched to sed & wc -l due to spaces and stuff
