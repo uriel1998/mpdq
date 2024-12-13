@@ -14,6 +14,9 @@ The program has been rewritten for simplicity and to avoid subprocesses; each ru
 will add a configurable number of tracks to the queue. Adding a self-contained idle 
 loop is in the roadmap.
 
+Dependency on ffmpeg/exiftool/etc is removed, because I somehow didn't think to just 
+query `mpc`.  Sigh.
+
 ## Contents
  1. [About](#1-about)
  2. [License](#2-license)
@@ -57,11 +60,6 @@ linux-like distros:
 * [bc](https://www.geeksforgeeks.org/bc-command-linux-examples/)
 * [detox](http://detox.sourceforge.net/)
 
-ONE or MORE of the following for artist and song information on your `$PATH`:
-
-* [exiftool](https://www.exiftool.org/)
-* [ffmpeg](https://ffmpeg.org/)
-
 `mpdq` will attempt to use them automatically in the order listed.
 
 ## 4. Installation
@@ -84,19 +82,23 @@ album_mins=30
 artist_mins=30
 # Genres to exclude from the above two checks
 genres_exclude_album_check=Sound Clip,Classical
-musicinfo=/usr/bin/ffprobe
+
 ```
 
 ## 5. Setup
 
 ### From the INI file
 
-`rotate_time` in the ini file defines how long mpdq keeps a log for in hours -- and helps define 
-how often each genre will be played.  
+`rotate_time` in the ini file defines how long mpdq keeps a log for in hours -- 
+and helps define how often each genre will be played.  
+
+`no_replay_rotate` in the ini file defines how long you will *not* hear a particular 
+track again in hours, like how radio stations used to promise you wouldn't hear 
+the same song twice in a workday. This checks the *track filename* not the *title*. 
 
 `album_mins` and `artist_mins` will *separately* define the minimum interval 
-*in minutes* before a specific album or artist will be played again.  This should 
-be shorter than `rotate_time`.
+*in minutes* before a specific album or artist will be played again.  These should 
+be shorter than `no_replay_rotate`.
 
 `genres_exclude_album_check` is a list of genres where the `album_mins` and `artist_mins` 
 checks will be *disabled*, for example, if you have a genre with only one or two artists or
