@@ -298,31 +298,16 @@ function choose_next_song {
             #check selected song length
             length=""
             # The funky formatting is so that if a full path is specified, it'll still match. 
-            case ${MUSICINFO} in
-                *exiftool)
-                    length=$(${MUSICINFO} "${SongFile}" 2>/dev/null | ${grep_bin} "Duration" | awk -F ':' '{sum += 60*60*$1} {sum += 60*$2 } {sum += $3} END {print sum}' )
-                    album=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "Album" | head -1 | cut -d : -f 2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-                    if [ "${album}" == "" ];then
-                        album=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "Title" | head -1 |  cut -d : -f 2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-                    fi                    
-                    artist=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "Album Artist" | head -1 |  cut -d : -f 2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-                    if [ "${artist}" == "" ];then
-                        artist=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "Artist" | head -1 |  cut -d : -f 2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-                    fi
-                    ;;
-                *ffprobe)
-                    # Why the & at the end is needed for ffprobe ONLY is beyond me...
-                    length=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "Duration" | awk -F ':' '{sum += 60*60*$1} {sum += 60*$2 } {sum += $3} END {print sum}' & )
-                    album=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "album" | head -1 | cut -d : -f 2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-                    if [ "${album}" == "" ];then
-                        album=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "title" | head -1 |  cut -d : -f 2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-                    fi                    
-                    artist=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "album_artist" | head -1 | cut -d : -f 2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-                    if [ "${artist}" == "" ];then
-                        artist=$(${MUSICINFO} "${SongFile}" 2>&1 | ${grep_bin} "artist" | head -1 |  cut -d : -f 2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-                    fi
-                    ;;
-            esac
+            
+            SongInfo=$(mpc --format "%time%§%album%§%albumartist%" --host "${MPD_HOST}" --port "${MPD_PORT}" find filename "${SongStem}")
+            hourcheck=$(echo "${SongInfo}" | awk -F '§' '{ print $1 }'| grep -c -e '\:'  )
+            if [ $hourcheck -eq 1 ];then
+                length=$(echo "${SongInfo}" | awk -F '§' '{print $1 }' | awk -F ':' '{print $1}')
+            else
+                length=$(echo "${SongInfo}" | awk -F '§' '{print $1 }' | awk -F ':' '{sum += 60*$1} {sum += $2 } END {print sum}')
+            fi
+            album=$(echo "${SongInfo}" | awk -F '§' '{print $2 }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+            artist=$(echo "${SongInfo}" | awk -F '§' '{print $3 }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
             if [ -z $length ];then
                 loud "No song duration found. Do we have ffmpeg or exiftool?"
                 length="0"
