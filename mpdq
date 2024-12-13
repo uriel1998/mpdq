@@ -274,7 +274,10 @@ function choose_next_song {
         # Genre name is just a straight search of the logfile, as the rotation should fix this
         TimesPlayed=$(cat "${ConfigLogFile}" | sed -n /"@${GenreName}@"/p | wc -l)
         if [ -f "${InstructionFile}" ];then
-            DefaultPriority=$(${grep_bin} -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
+            DefaultPriority=$(${grep_bin} -i -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
+            if [ "$DefaultPriority" == "" ];then
+                DefaultPriority=0
+            fi
             # switched to sed & wc -l due to spaces and stuff
             InInstruction=$(sed -n /"${GenreName}"/p "${InstructionFile}" "${InstructionFile}" | wc -l)
             if [ ${InInstruction} -eq 0 ];then
@@ -484,7 +487,11 @@ if [ ! -f "${InstructionFile}" ];then
 fi
 
 if [ -f "${InstructionFile}" ];then
-    DefaultPriority=$(${grep_bin} -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
+     DefaultPriority=$(${grep_bin} -i -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
+    if [ "$DefaultPriority" == "" ];then
+        DefaultPriority=0
+    fi
+
 fi 
   
 loud "Loading instruction file commands"
