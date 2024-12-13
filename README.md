@@ -14,6 +14,9 @@ The program has been rewritten for simplicity and to avoid subprocesses; each ru
 will add a configurable number of tracks to the queue. Adding a self-contained idle 
 loop is in the roadmap.
 
+Dependency on ffmpeg/exiftool/etc is removed, because I somehow didn't think to just 
+query `mpc`.  Sigh.
+
 ## Contents
  1. [About](#1-about)
  2. [License](#2-license)
@@ -57,11 +60,6 @@ linux-like distros:
 * [bc](https://www.geeksforgeeks.org/bc-command-linux-examples/)
 * [detox](http://detox.sourceforge.net/)
 
-ONE or MORE of the following for artist and song information on your `$PATH`:
-
-* [exiftool](https://www.exiftool.org/)
-* [ffmpeg](https://ffmpeg.org/)
-
 `mpdq` will attempt to use them automatically in the order listed.
 
 ## 4. Installation
@@ -84,7 +82,7 @@ album_mins=30
 artist_mins=30
 # Genres to exclude from the above two checks
 genres_exclude_album_check=Sound Clip,Classical
-musicinfo=/usr/bin/ffprobe
+
 ```
 
 ## 5. Setup
