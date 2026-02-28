@@ -247,6 +247,27 @@ function read_our_relay {
     esac
 }
 
+function change_station {
+	
+	newstation="${1}"
+	if [ -f "${ConfigDir}/${newstation}.cfg" ]; then
+		loud "[info] Changing station to ${newstation}"
+		cp "${ConfigDir}/${newstation}.cfg" "${ConfigDir}/default.cfg"
+		mpc --host $MPD_HOST --port $MPD_PORT crop
+		( sleep 10; mpdq ) &
+		exit
+	else
+		if [ -f $(which fzf) ];then
+			answer=$(ls "${ConfigDir}"/*.cfg | fzf)
+			answer2=$(basename "${answer}")
+			change_station ${answer2%%.*}
+		else
+			loud "[ERROR] ${newstation} not found!"
+		fi
+	fi
+}
+
+
 function choose_next_song {
  
     SongFileToAdd=""
@@ -313,7 +334,7 @@ function choose_next_song {
             album=$(echo "${SongInfo}" | awk -F '§' '{print $2 }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
             artist=$(echo "${SongInfo}" | awk -F '§' '{print $3 }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
             if [ -z $length ];then
-                loud "No song duration found. Do we have ffmpeg or exiftool?"
+                loud "No song duration found from mpc/mpd."
                 length="0"
             fi
             if [ $length -gt $SONGLENGTH ];then
@@ -432,6 +453,9 @@ option="$1"
         -e) create_example
             exit
             ;;
+        -s) change_station "${1}"
+            exit
+            ;;            
         -c) already_running  # should abort if already running
             shift
             InstructionFile="$1"
