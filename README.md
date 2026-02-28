@@ -169,6 +169,7 @@ be applied to all genres.
 * -k : Kill a currently running `mpdq` process.
 * -e : Create an example instruction file at $XDG_CONFIG_HOME/mpdq/example_instruction.
 * -f : Force MPD to have the right playback settings (see `Pausing the program` below).
+* -s : Choose a "station", e.g. which config file and automatically crop the queue and switch to it.
 * -h : Show a short help message.
 * --loud: Give more feedback to terminal (yes, this means the default is quiet mode)  
 

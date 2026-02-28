@@ -331,7 +331,7 @@ function choose_next_song {
             else
                 length=$(echo "${SongInfo}" | awk -F '§' '{print $1 }' | awk -F ':' '{sum += 60*$1} {sum += $2 } END {print sum}')
             fi
-            album=$(echo "${SongInfo}" | awk -F '§' '{print $2 }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+            album=$(echo "${SongInfo}" | awk -F '§' '{print $2 }' |  's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
             artist=$(echo "${SongInfo}" | awk -F '§' '{print $3 }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
             if [ -z $length ];then
                 loud "No song duration found from mpc/mpd."
@@ -458,7 +458,11 @@ option="$1"
             ;;            
         -c) already_running  # should abort if already running
             shift
-            InstructionFile="$1"
+            if [[ "${1}" == *"${ConfigDir}"* ]]; then 
+				InstructionFile="$1"
+			else
+				change_station "${1}"
+			fi
             shift
             ;;
         -h)
