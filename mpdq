@@ -256,7 +256,7 @@ function change_station {
 		loud "[info] Changing station to ${newstation}"
 		cp "${ConfigDir}/${newstation}.cfg" "${ConfigDir}/default.cfg"
 		mpc --host $MPD_HOST --port $MPD_PORT crop
-		( sleep 10; mpdq ) &
+		( sleep 10; "${SCRIPT_DIR}"/mpdq ) &
 		exit
 	else
 		if [ -f $(which fzf) ];then
