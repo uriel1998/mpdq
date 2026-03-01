@@ -178,6 +178,9 @@ It should be run as a single run process or using the `watch` command (e.g. `wat
 With each run, `mpdq` will add `queuesize` (from the ini file) tracks to MPD queue 
 and then exit.
 
+If you run `mpdq -s [name of configuration file]` then it will trim the queue to just the currently playing song, load that configuration, 
+and follow those instructions to fill up the queue.  For example, `mpdq -s rock` will load the instructions in `$HOME/.config/mpdq/rock.cfg`.  That lets it finish playing the current song before switching.  If you leave off which example to use and have `fzf` installed, it'll let you choose interactively. 
+
 * If `mpdq.ini` is set up properly, you can even just do "random mode" by running `mpdq` by itself, and setting the frequency using `-d`.
 * If you've got `default.cfg` set up as well, you can just run `mpdq` with no switches.
 
