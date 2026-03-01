@@ -248,9 +248,11 @@ function read_our_relay {
 }
 
 function change_station {
-	
 	newstation="${1}"
 	if [ -f "${ConfigDir}/${newstation}.cfg" ]; then
+		loud "[info] Wiping songlogs"
+		echo "" > "${ConfigLogFile}"
+		echo "" > "${ConfigLogFile2}"
 		loud "[info] Changing station to ${newstation}"
 		cp "${ConfigDir}/${newstation}.cfg" "${ConfigDir}/default.cfg"
 		mpc --host $MPD_HOST --port $MPD_PORT crop
@@ -331,7 +333,7 @@ function choose_next_song {
             else
                 length=$(echo "${SongInfo}" | awk -F '§' '{print $1 }' | awk -F ':' '{sum += 60*$1} {sum += $2 } END {print sum}')
             fi
-            album=$(echo "${SongInfo}" | awk -F '§' '{print $2 }' |  's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+            album=$(echo "${SongInfo}" | awk -F '§' '{print $2 }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
             artist=$(echo "${SongInfo}" | awk -F '§' '{print $3 }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
             if [ -z $length ];then
                 loud "No song duration found from mpc/mpd."
@@ -453,7 +455,8 @@ option="$1"
         -e) create_example
             exit
             ;;
-        -s) change_station "${1}"
+        -s) shift 
+			change_station "${1}"
             exit
             ;;            
         -c) already_running  # should abort if already running
