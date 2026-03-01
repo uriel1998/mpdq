@@ -65,6 +65,8 @@ NUMGENRES=""
 LOUD=0
 # if we have exhausted all available options, shorten logrotate time temporarily
 EMERGENCY_ROTATE=0
+# If we are doing local file checks (e.g. to use on a remote machine!)
+REMOTE=0
 # initialize choosing array 
 export ChooseGenre=()
 
@@ -151,7 +153,7 @@ function read_variables() {
     if [[ `echo "$config" | ${grep_bin} -c -e "^album_mins="` -gt 0 ]];then ALBUM_MINS=$(echo "$config" | ${grep_bin} -e "^album_mins=" | cut -d = -f 2- );else ALBUM_MINS="15";fi
     if [[ `echo "$config" | ${grep_bin} -c -e "^artist_mins="` -gt 0 ]];then ARTIST_MINS=$(echo "$config" | ${grep_bin} -e "^artist_mins=" | cut -d = -f 2- );else ARTIST_MINS="15";fi    
     if [[ `echo "$config" | ${grep_bin} -c -e "^songlength="` -gt 0 ]];then SONGLENGTH=$(echo "$config" | ${grep_bin} -e "^songlength=" | cut -d = -f 2- );else SONGLENGTH="15";fi
-
+    if [[ `echo "$config" | ${grep_bin} -c -e "^remote="` -gt 0 ]];then REMOTE=$(echo "$config" | ${grep_bin} -e "^remote=" | cut -d = -f 2- );else REMOTE="0";fi
     
     # Determining where/how to assess song length
     if [[ `echo "$config" | ${grep_bin} -c -e "^musicinfo="` -gt 0 ]];then 
@@ -345,7 +347,12 @@ function choose_next_song {
 					loud "Song too long; kicking back"
 					SongFile=""
 				fi
-				if [ -f "${SongFile}" ];then  # if it hasn't been rejected
+				if [ "$REMOTE" == "0" ]; then
+					if [ ! -f "${SongFile}" ];then  # if it hasn't been rejected
+						SongFile=""
+					fi
+				fi
+				if [ "${SongFile}" != "" ];then  # if it hasn't been rejected
 					# Genres to omit from album/artist checking (because there's only a few in that genre)           
 					DontCheckAlbumOrArtistTime=$(sed -n /^genres_exclude_album_check=/p "${ConfigFile}" | cut -d = -f 2-)
 					if [[ $DontCheckAlbumOrArtistTime == *"${GenreName}" ]];then
@@ -370,8 +377,12 @@ function choose_next_song {
 				SongFile=""
 			fi
 		fi
-        if [ -f "${SongFile}" ];then
-            # adding to logfile here because we have the function variables here
+		if [ "$REMOTE" == "0" ]; then
+			if [ ! -f "${SongFile}" ];then  # if it hasn't been rejected
+				SongFile=""
+			fi
+		fi
+		if [ "${SongFile}" != "" ];then  # if it hasn't been rejected            # adding to logfile here because we have the function variables here
             SongFileToAdd="$SongFile"
             #mark that we used it.
             nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
