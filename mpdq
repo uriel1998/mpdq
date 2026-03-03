@@ -259,7 +259,12 @@ function change_station {
 		cp "${ConfigDir}/${newstation}.cfg" "${ConfigDir}/default.cfg"
 		mpc --host $MPD_HOST --port $MPD_PORT crop
         # if there is anything in genre "Bumper" then choose one randomly and add it.
-        #TODO: hardcode a skip of genres Bumper and Sound Clips in song selection
+        SongStem=$(mpc --host "${MPD_HOST}" --port "${MPD_PORT}" find genre "Bumper" | shuf -n1 )
+        if [ "$SongStem" != "" ];then
+            # We will also use $SongFile as a continuing check
+            SongFile="$MPDBASE/$SongStem"
+            `mpc --host $MPD_HOST --port $MPD_PORT add "$SongFile"`
+        fi
         ( sleep 2; "${SCRIPT_DIR}"/mpdq ) &
         exit 0
 	else
@@ -300,6 +305,7 @@ function choose_next_song {
         GenreName="${ChooseGenre[$GenreNumber]}"
         loud "Examining ${GenreName}"
         # Genre name is just a straight search of the logfile, as the rotation should fix this
+        # Hardcoded skip of genres Bumper and Sound Clips in song selection; those genres are for extras.
         if [ "${GenreName}" != "" ] && [ "${GenreName}" != "Bumper" ] &&  [ "${GenreName}" != "Sound Clip" ];then
 			TimesPlayed=$(cat "${ConfigLogFile}" | sed -n /"@${GenreName}@"/p | wc -l)
 			if [ -f "${InstructionFile}" ];then
