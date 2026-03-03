@@ -179,9 +179,17 @@ It should be run as a single run process or using the `watch` command (e.g. `wat
 With each run, `mpdq` will add `queuesize` (from the ini file) tracks to MPD queue
 and then exit.
 
+### Changing the station
+
 If you run `mpdq -s [name of configuration file]` then it will trim the queue to just the currently playing song, load that configuration,
 and follow those instructions to fill up the queue.  For example, `mpdq -s rock` will load the instructions in `$HOME/.config/mpdq/rock.cfg`.  That lets it finish playing the current song before switching.  If you leave off which example to use and have `fzf` installed, it'll let you choose interactively.
-** If you have any tracks with the genre `Bumper`, it will add that before queuing more tracks.** You can put some "station tuning" effects if you want; there are some from Freesound in the repository. 
+
+You can put the genre-based instruction files in $XDG_CONFIG_HOME/mpdq/stations to allow you to select those as well. There is also a helper script to prune down some of the MANY genre names and eliminate instruction sets that have no valid genres in them. While they'll work as-is, they're meant to be a template to quickly adapt yourself.
+
+** If you have any tracks with the genre `Bumper`, it will add that before queuing more tracks** when changing stations. You can put your own "station tuning" effects if you want; there are some from Freesound in the repository. 
+
+
+
 
 * If `mpdq.ini` is set up properly, you can even just do "random mode" by running `mpdq` by itself, and setting the frequency using `-d`.
 * If you've got `default.cfg` set up as well, you can just run `mpdq` with no switches.
