@@ -13,7 +13,7 @@
 VERSION=2.3.0
 
 # This is an awful hack
-if [ "$UID" == "0" ];then 
+if [ "$UID" == "0" ];then
     loud "MPDQ is running as root. Note that /usr/local/share and"
     loud "/usr/local/state are being used as XDG directories."
     export XDG_CONFIG_HOME=/usr/local/share
@@ -32,7 +32,7 @@ RelayName=${StateDir}/mpdq_cmd
 ConfigLogFile=${StateDir}/playedsongs.log
 ConfigLogFile2=${StateDir}/playedsongs2.log
 
-# Global variables 
+# Global variables
 export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 grep_bin=$(which grep)
 MPDBASE=""
@@ -43,12 +43,12 @@ MPD_PORT=""
 PLAYLIST_TRIGGER=""
 # How long before a song/genre gets purged from the log, IN HOURS
 ROTATE_TIME=""
-# Longest time to not hear a song again. Must be LONGER than MAXIMUM "no repeat" 
+# Longest time to not hear a song again. Must be LONGER than MAXIMUM "no repeat"
 # time for album and artist
 NOREPLAY_ROTATE_TIME=""
 # How long before a particular album or artist can be played again. SEPARATE
-# from the main log, and should be SHORTER than NO_REPLAY_TIME. IN MINUTES  These 
-# will be checked 
+# from the main log, and should be SHORTER than NO_REPLAY_TIME. IN MINUTES  These
+# will be checked
 # dynamically against the current logfile for thier individual time periods.
 ALBUM_MINS=""
 ARTIST_MINS=""
@@ -67,7 +67,7 @@ LOUD=0
 EMERGENCY_ROTATE=0
 # If we are doing local file checks (e.g. to use on a remote machine!)
 REMOTE=0
-# initialize choosing array 
+# initialize choosing array
 export ChooseGenre=()
 
 
@@ -107,7 +107,7 @@ function show_help {
     echo "  -k Kill existing mpdq process "
     echo "  -e Create example instruction file "
     echo "  -h Show this help message"
-    echo "  -f Force MPD to have the right playback settings"    
+    echo "  -f Force MPD to have the right playback settings"
     echo "  --loud get more feedback on mpdq's execution"
 }
 
@@ -122,17 +122,17 @@ function init_config() {
     if [ ! -d "$CacheDir" ];then
         mkdir -p "$CacheDir"
     fi
-    if [ ! -f "$ConfigLogFile" ];then 
+    if [ ! -f "$ConfigLogFile" ];then
         touch "$ConfigLogFile"
     fi
-    if [ ! -f "$ConfigLogFile2" ];then 
+    if [ ! -f "$ConfigLogFile2" ];then
         touch "$ConfigLogFile2"
     fi
 
 }
 
 function read_variables() {
-    if [ -f "$ConfigFile" ];then 
+    if [ -f "$ConfigFile" ];then
         config=$(cat "$ConfigFile")
     else
         loud "Configuration file not found; using defaults."
@@ -146,19 +146,19 @@ function read_variables() {
     MPD_PASS=$(echo "$config" | ${grep_bin} -e "^mpdpass=" | cut -d = -f 2-) &&
     MPD_HOST="$MPD_PASS@$MPD_HOST"
     MPD_PORT=$(echo "$config" | ${grep_bin} -e "^mpdport=" | cut -d = -f 2- || echo 6600)
- 
+
     if [[ `echo "$config" | ${grep_bin} -c -e "^queuesize="` -gt 0 ]];then PLAYLIST_TRIGGER=$(echo "$config" | ${grep_bin} -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
     if [[ `echo "$config" | ${grep_bin} -c -e "^rotate_time="` -gt 0 ]];then ROTATE_TIME=$(echo "$config" | ${grep_bin} -e "^rotate_time=" | cut -d = -f 2- );else ROTATE_TIME="8";fi
     if [[ `echo "$config" | ${grep_bin} -c -e "^no_replay_rotate="` -gt 0 ]];then NOREPLAY_ROTATE_TIME=$(echo "$config" | ${grep_bin} -e "^no_replay_rotate=" | cut -d = -f 2- );else NOREPLAY_ROTATE_TIME="8";fi
     if [[ `echo "$config" | ${grep_bin} -c -e "^album_mins="` -gt 0 ]];then ALBUM_MINS=$(echo "$config" | ${grep_bin} -e "^album_mins=" | cut -d = -f 2- );else ALBUM_MINS="15";fi
-    if [[ `echo "$config" | ${grep_bin} -c -e "^artist_mins="` -gt 0 ]];then ARTIST_MINS=$(echo "$config" | ${grep_bin} -e "^artist_mins=" | cut -d = -f 2- );else ARTIST_MINS="15";fi    
+    if [[ `echo "$config" | ${grep_bin} -c -e "^artist_mins="` -gt 0 ]];then ARTIST_MINS=$(echo "$config" | ${grep_bin} -e "^artist_mins=" | cut -d = -f 2- );else ARTIST_MINS="15";fi
     if [[ `echo "$config" | ${grep_bin} -c -e "^songlength="` -gt 0 ]];then SONGLENGTH=$(echo "$config" | ${grep_bin} -e "^songlength=" | cut -d = -f 2- );else SONGLENGTH="15";fi
     if [[ `echo "$config" | ${grep_bin} -c -e "^remote="` -gt 0 ]];then REMOTE=$(echo "$config" | ${grep_bin} -e "^remote=" | cut -d = -f 2- );else REMOTE="0";fi
-    
+
     # Determining where/how to assess song length
-    if [[ `echo "$config" | ${grep_bin} -c -e "^musicinfo="` -gt 0 ]];then 
+    if [[ `echo "$config" | ${grep_bin} -c -e "^musicinfo="` -gt 0 ]];then
         MUSICINFO=$(echo "$config" | ${grep_bin} -e "^musicinfo=" | cut -d = -f 2- )
-    else 
+    else
         if [ -f $(which ffprobe) ];then
             MUSICINFO=ffprobe
         else
@@ -178,7 +178,7 @@ function read_variables() {
 }
 
 function rotate_songlog {
-    
+
     if [ -f "$ConfigLogFile" ];then
         tempfile=$(mktemp)
         currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
@@ -211,7 +211,7 @@ function rotate_songlog {
     else
         touch "$ConfigLogFile2"
     fi
-    
+
 }
 
 function create_example(){
@@ -230,7 +230,7 @@ function killing(){
         fi
     done < /tmp/mpdq.pid
     rm /tmp/mpdq.pid
- 
+
     exit
 }
 
@@ -241,8 +241,8 @@ function read_our_relay {
     rm -rf "${RelayName}"
     case ${relay_command} in
         kill) killing ;;
-        *) 
-            if [ -f "${relay_command}" ];then 
+        *)
+            if [ -f "${relay_command}" ];then
                 InstructionFile="${relay_command}"
             fi
             ;;
@@ -258,8 +258,10 @@ function change_station {
 		loud "[info] Changing station to ${newstation}"
 		cp "${ConfigDir}/${newstation}.cfg" "${ConfigDir}/default.cfg"
 		mpc --host $MPD_HOST --port $MPD_PORT crop
-		( sleep 10; "${SCRIPT_DIR}"/mpdq ) &
-		exit
+        # if there is anything in genre "Bumper" then choose one randomly and add it.
+        #TODO: hardcode a skip of genres Bumper and Sound Clips in song selection
+        ( sleep 2; "${SCRIPT_DIR}"/mpdq ) &
+        exit 0
 	else
 		if [ -f $(which fzf) ];then
 			answer=$(ls "${ConfigDir}"/*.cfg | fzf)
@@ -273,16 +275,16 @@ function change_station {
 
 
 function choose_next_song {
- 
+
     SongFileToAdd=""
     GenreNumber=""
     OkayGenre=""
-    
-    
+
+
 ## NEED TO CHECK FOR SPLIT AND WHITESPACE FOR GENRE NAMES
     counter=1 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
 
-    while [ -z "${OkayGenre}" ] && [ ${counter} -lt ${NUMGENRES} ] 
+    while [ -z "${OkayGenre}" ] && [ ${counter} -lt ${NUMGENRES} ]
     do
         OIFS=$IFS
         IFS=$'\n'
@@ -292,13 +294,13 @@ function choose_next_song {
         InInstruction=""
         GenreName=""
         CurrWeight=""
-        # changing this to checking our array --  bot with number and what variable it spits back       
+        # changing this to checking our array --  bot with number and what variable it spits back
         #get random number for genre
-        GenreNumber=$(shuf -i 1-${#ChooseGenre[@]} -n 1)            
+        GenreNumber=$(shuf -i 1-${#ChooseGenre[@]} -n 1)
         GenreName="${ChooseGenre[$GenreNumber]}"
         loud "Examining ${GenreName}"
         # Genre name is just a straight search of the logfile, as the rotation should fix this
-		if [ "${GenreName}" != "" ];then
+        if [ "${GenreName}" != "" ] && [ "${GenreName}" != "Bumper" ] &&  [ "${GenreName}" != "Sound Clip" ];then
 			TimesPlayed=$(cat "${ConfigLogFile}" | sed -n /"@${GenreName}@"/p | wc -l)
 			if [ -f "${InstructionFile}" ];then
 				DefaultPriority=$(${grep_bin} -i -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
@@ -306,7 +308,7 @@ function choose_next_song {
 					DefaultPriority=0
 				fi
 				# switched to sed & wc -l due to spaces and stuff
-				
+
 				InInstruction=$(sed -n /"${GenreName}"/p "${InstructionFile}" "${InstructionFile}" | wc -l)
 				if [ ${InInstruction} -eq 0 ];then
 					CurrWeight=${DefaultPriority}
@@ -318,18 +320,18 @@ function choose_next_song {
 				CurrWeight=${DefaultPriority}
 			fi
 			loud "Default ${DefaultPriority} :: Played ${TimesPlayed} :: Weight ${CurrWeight}"
-			
+
 			# does this need to be changed to a > ??? with quotes?
-			
+
 			if [[ ${TimesPlayed} -lt ${CurrWeight} ]];then
 				# Use shuf to get us a random song from that genre
 				SongStem=$(mpc --host "${MPD_HOST}" --port "${MPD_PORT}" find genre "${GenreName}" | shuf -n1 )
-				# We will also use $SongFile as a continuing check 
+				# We will also use $SongFile as a continuing check
 				SongFile="$MPDBASE/$SongStem"
 				#check selected song length
 				length=""
-				# The funky formatting is so that if a full path is specified, it'll still match. 
-				
+				# The funky formatting is so that if a full path is specified, it'll still match.
+
 				SongInfo=$(mpc --format "%time%§%album%§%albumartist%" --host "${MPD_HOST}" --port "${MPD_PORT}" find filename "${SongStem}")
 				hourcheck=$(echo "${SongInfo}" | awk -F '§' '{ print $1 }'| grep -c -e '\:'  )
 				if [ $hourcheck -eq 1 ];then
@@ -353,7 +355,7 @@ function choose_next_song {
 					fi
 				fi
 				if [ "${SongFile}" != "" ];then  # if it hasn't been rejected
-					# Genres to omit from album/artist checking (because there's only a few in that genre)           
+					# Genres to omit from album/artist checking (because there's only a few in that genre)
 					DontCheckAlbumOrArtistTime=$(sed -n /^genres_exclude_album_check=/p "${ConfigFile}" | cut -d = -f 2-)
 					if [[ $DontCheckAlbumOrArtistTime == *"${GenreName}" ]];then
 						currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
@@ -362,16 +364,16 @@ function choose_next_song {
 						# No need for difftime3 - it's literally the entire file
 						hightime=$(( "$currenttime"-"$difftime" ))
 						hightime2=$(( "$currenttime"-"$difftime2" ))
-				
+
 						# because of quoting, artists with spaces may provide extra hits using grep counting.
 						# so we're going to use wc -l to count LINES returned which should hopefully help
-				
-						if [[ `cat "$ConfigLogFile2" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime' | grep -e "@${artist}@" | wc -l` > -gt ]];then echo "Artist found in log: ${artist}"; SongFile="";fi 
+
+						if [[ `cat "$ConfigLogFile2" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime' | grep -e "@${artist}@" | wc -l` > -gt ]];then echo "Artist found in log: ${artist}"; SongFile="";fi
 						if [[ `cat "$ConfigLogFile2" | awk -F '@@@' -v hightime="$hightime2" '$1 > hightime' | grep -e "@#${album}@" | wc -l` -gt 0 ]] ;then echo "Album found in log: ${album}"; SongFile="";fi
 						if [[ `cat "$ConfigLogFile2" | grep -e "@#${SongFile}@" | wc -l` -gt 0 ]] ;then echo "Song found in log: ${album}"; SongFile="";fi
 					fi
-				fi           
-			else 
+				fi
+			else
 				loud "Used up ${GenreName}"
 				GenreName=""
 				SongFile=""
@@ -389,7 +391,7 @@ function choose_next_song {
             echo "$nowtime@@@${SongFileToAdd}@${GenreName}@${artist}@#${album}" >> "$ConfigLogFile"
             echo "$nowtime@@@${SongFileToAdd}@${GenreName}@${artist}@#${album}" >> "$ConfigLogFile2"
             loud "Adding song from ${album} by ${artist} in the ${GenreName} genre."
-                
+
             # at end to close out do-while loop
             OkayGenre="${GenreName}"
         else
@@ -401,7 +403,7 @@ function choose_next_song {
             rotate_songlog
             EMERGENCY_ROTATE=0
         fi
-    done    
+    done
     IFS=$OIFS
 #TODO - What happens if it maxes the counter ( -- maybe reset the logfiles?)
 }
@@ -415,7 +417,7 @@ function need_next_song {
     while [ -z "$SongFileToAdd" ];do
         choose_next_song
     done
-    
+
     SongFileToAdd=${SongFileToAdd#$MPDBASE/}
 
     `mpc --host $MPD_HOST --port $MPD_PORT add "$SongFileToAdd"`
@@ -428,25 +430,25 @@ function main {
     rotate_songlog
 
 
-    
-    if [ -f ${RelayName} ];then 
+
+    if [ -f ${RelayName} ];then
         read_our_relay
     fi
     # Messy, but closes all subprocesses out
     if [ ! -f /tmp/mpdq.pid ];then
         killing
-    fi        
-    
+    fi
+
     playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
-    
+
     while [[ $playlist_length -lt $PLAYLIST_TRIGGER ]]; do
         need_next_song
         playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
     done
 
-# TODO - change this into an idle loop.  Since we read the instructionfile 
+# TODO - change this into an idle loop.  Since we read the instructionfile
 # dynamically now, it won't matter if we point it in a different direction through
-# the relay.  
+# the relay.
 
 
 }
@@ -461,20 +463,20 @@ read_variables
 while [ $# -gt 0 ]; do
 option="$1"
     case $option in
-        --loud|-l) 
+        --loud|-l)
             export LOUD=1
             shift
-            ;;             
+            ;;
         -e) create_example
             exit
             ;;
-        -s) shift 
+        -s) shift
 			change_station "${1}"
             exit
-            ;;            
+            ;;
         -c) already_running  # should abort if already running
             shift
-            if [[ "${1}" == *"${ConfigDir}"* ]]; then 
+            if [[ "${1}" == *"${ConfigDir}"* ]]; then
 				InstructionFile="$1"
 			else
 				change_station "${1}"
@@ -485,7 +487,7 @@ option="$1"
             show_help
             exit
             ;;
-        -r) 
+        -r)
             shift
             echo "$1" > ${RelayName}
             loud "${1} sent to mpdq relay file"
@@ -493,19 +495,19 @@ option="$1"
             ;;
         -f)
             mpc --host $MPD_HOST --port $MPD_PORT --quiet consume on
-            mpc --host $MPD_HOST --port $MPD_PORT --quiet random off        
+            mpc --host $MPD_HOST --port $MPD_PORT --quiet random off
             ;;
         -k)
             already_running
             echo "kill" > ${RelayName}
             loud "Kill command sent to relay."
             # TODO - sleep here, wait to see if pidfile needs reaping
-            ;;            
-            
-    esac    
+            ;;
+
+    esac
 done
 
-# switch off if not set -- whoops.  
+# switch off if not set -- whoops.
 test_string=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1)
 # using xargs to strip whitespace here
 random=$(echo "${test_string}" | awk -F 'random: ' '{print $2}' | awk '{print $1}')
@@ -537,11 +539,11 @@ if [ -f "${InstructionFile}" ];then
         DefaultPriority=0
     fi
 
-fi 
-  
+fi
+
 loud "Loading instruction file commands"
 # go through list of genres from mpc/mpd
-while read -r line; do    
+while read -r line; do
     # is it in our instruction file?
     CG="${line}"
     InInstruction=$(sed -n /^"${CG}"=/p "${InstructionFile}" "${InstructionFile}" | wc -l)
@@ -549,7 +551,7 @@ while read -r line; do
         # if not, weight=default
         CurrWeight=${DefaultPriority}
     else
-        # if so, weight=value from instruction file    
+        # if so, weight=value from instruction file
         # tail included to catch in case there's a duplicate instruction, takes last
         CurrWeight=$(sed -n /^"${CG}="/p "${InstructionFile}" | tail -n 1 |cut -d = -f 2-)
     fi
