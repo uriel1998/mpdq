@@ -250,13 +250,39 @@ function read_our_relay {
 }
 
 function change_station {
-	newstation="${1}"
-	if [ -f "${ConfigDir}/${newstation}.cfg" ]; then
+    # just in case the extension gets passed somewhere.
+    newstation="${1%%.cfg}"
+
+    if [ -f "${ConfigDir}/${newstation}.cfg" ] && [ "${newstation}" != "" ]; then
+        # original, hand-made configs
+        stationfile="${ConfigDir}/${newstation}.cfg"
+        station="${newstation}"
+    else
+        # does not match one of those, so....
+        if [ -f "${ConfigDir}/stations/${newstation}.cfg" ];then
+            # look at the genre family stations
+            stationfile="${ConfigDir}/stations/${newstation}.cfg"
+            station="${newstation}"
+        else
+            # neither matched
+            stationfile=""
+            bob=$(find "${ConfigDir}" -iname "*.cfg" | sed 's/\.cfg//' | sed "s@${ConfigDir}/@@" | sed "/default.*/d" )
+            if [ -f $(which fzf) ];then
+                # use fzf to choose which one.
+                answer2=$(echo -e "$bob" | fzf --multi --header="Choose the instruction file to use!" --header-lines=0 --prompt=">" --tmux 70% --preview="cat $ConfigDir/{}.cfg")
+                station="${answer2}"
+                stationfile="${ConfigDir}/${answer2}.cfg"
+            fi
+        fi
+    fi
+
+    if [ -f "${stationfile}" ];then
+        loud "[info] Using ${station}."
 		loud "[info] Wiping songlogs"
 		echo "" > "${ConfigLogFile}"
 		echo "" > "${ConfigLogFile2}"
 		loud "[info] Changing station to ${newstation}"
-		cp "${ConfigDir}/${newstation}.cfg" "${ConfigDir}/default.cfg"
+        cp "${stationfile}" "${ConfigDir}/default.cfg"
 		mpc --host $MPD_HOST --port $MPD_PORT crop
         # if there is anything in genre "Bumper" then choose one randomly and add it.
         SongStem=$(mpc --host "${MPD_HOST}" --port "${MPD_PORT}" find genre "Bumper" | shuf -n1 )
@@ -268,13 +294,10 @@ function change_station {
         ( sleep 2; "${SCRIPT_DIR}"/mpdq ) &
         exit 0
 	else
-		if [ -f $(which fzf) ];then
-			answer=$(ls "${ConfigDir}"/*.cfg | fzf)
-			answer2=$(basename "${answer}")
-			change_station ${answer2%%.*}
-		else
-			loud "[ERROR] ${newstation} not found!"
-		fi
+        loud "[ERROR] ${newstation} not found!"
+        loud "[INFO] Available stations:"
+        # For other things to parse, like a controller/chooser.
+        echo "$bob"
 	fi
 }
 
