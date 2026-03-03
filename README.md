@@ -1,8 +1,6 @@
 # mpdq
 
-Automatic MPD playlist or party mode creator to provide
-weighted randomness while autoqueuing MPD
-without relying on external services.
+Automatic MPD playlist or party mode creator to provide weighted randomness while autoqueuing MPD without relying on external services.
 
 ![mpdq logo](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq-open-graph.png "logo")
 
@@ -10,30 +8,27 @@ without relying on external services.
 
 ### Change from prior versions!
 
-The program has been rewritten for simplicity and to avoid subprocesses; each run
-will add a configurable number of tracks to the queue. Adding a self-contained idle
-loop is in the roadmap.
+The program has been rewritten for simplicity and to avoid subprocesses; each run will add a configurable number of tracks to the queue. Adding a self-contained idle loop is in the roadmap.
 
-Dependency on ffmpeg/exiftool/etc is removed, because I somehow didn't think to just
-query `mpc`.  Sigh.
+Dependency on ffmpeg/exiftool/etc is removed, because I somehow didn't think to just query `mpc`. Sigh.
 
 ## Contents
- 1. [About](#1-about)
- 2. [License](#2-license)
- 3. [Prerequisites](#3-prerequisites)
- 4. [Installation](#4-installation)
- 5. [Setup](#5-setup)
- 6. [Usage](#6-usage)
- 7. [TODO](#7-todo)
 
-***
+1. [About](#1-about)
+2. [License](#2-license)
+3. [Prerequisites](#3-prerequisites)
+4. [Installation](#4-installation)
+5. [Setup](#5-setup)
+6. [Usage](#6-usage)
+7. [TODO](#7-todo)
+
+---
 
 ## 1. About
 
-`mpdq` is a auto-queing system for MPD to create a flexible and configurable "party mode" effect with randomization and (re)discovery of your own music. Inspired by the eclectic soundtracks of *Letterkenny*, *High Fidelity*, *Doom Patrol*, and many more.
-(In-depth explanation at [my blog](https://ideatrash.net/?p=121759)).
+`mpdq` is an auto-queuing system for MPD to create a flexible and configurable "party mode" effect with randomization and (re)discovery of your own music. It is inspired by the eclectic soundtracks of *Letterkenny*, *High Fidelity*, *Doom Patrol*, and many more. In-depth explanation: [my blog](https://ideatrash.net/?p=121759).
 
-`mpdq` will autoqueue random tracks from your existing music library, with per-genre weighting and simple defaults.  
+`mpdq` will autoqueue random tracks from your existing music library, with per-genre weighting and simple defaults.
 
 Because it uses `mpd`'s own data, new tracks and changes to your music library will be incorporated when `mpd` is updated.
 
@@ -47,21 +42,20 @@ This project is licensed under the MIT License. For the full license, see `LICEN
 
 Required (non-basic Linux packages):
 
-* [mpd](https://www.musicpd.org/)
-* [mpc](http://git.musicpd.org/cgit/master/mpc.git/)
+- [mpd](https://www.musicpd.org/)
+- [mpc](http://git.musicpd.org/cgit/master/mpc.git/)
 
 Optional:
 
-* [fzf](https://github.com/junegunn/fzf) for interactive station selection when using `mpdq -s` without a station name.
+- [fzf](https://github.com/junegunn/fzf) for interactive station selection when using `mpdq -s` without a station name.
 
 Everything else used by `mpdq` is part of a standard Linux userland (`bash`, GNU coreutils, `grep`, `sed`, `awk`, `findutils`, `procps`).
 
 ## 4. Installation
 
-Place mpdq.ini in $XDG_CONFIG_HOME/mpdq
+Place `mpdq.ini` in `$XDG_CONFIG_HOME/mpdq`:
 
-
-```
+```ini
 [SERVER]
 musicdir=/directory/to/music
 mpdserver=localhost
@@ -76,150 +70,109 @@ album_mins=30
 artist_mins=30
 # Genres to exclude from the above two checks
 genres_exclude_album_check=Sound Clip,Classical
-
 ```
 
 ## 5. Setup
 
 ### From the INI file
 
-`rotate_time` in the ini file defines how long mpdq keeps a log for in hours --
-and helps define how often each genre will be played.  
+`rotate_time` in the ini file defines how long `mpdq` keeps a log, in hours, and helps define how often each genre will be played.
 
-`no_replay_rotate` in the ini file defines how long you will *not* hear a particular
-track again in hours, like how radio stations used to promise you wouldn't hear
-the same song twice in a workday. This checks the *track filename* not the *title*.
+`no_replay_rotate` in the ini file defines how long you will *not* hear a particular track again, in hours, like how radio stations used to promise you wouldn't hear the same song twice in a workday. This checks the *track filename*, not the *title*.
 
-`album_mins` and `artist_mins` will *separately* define the minimum interval
-*in minutes* before a specific album or artist will be played again.  These should
-be shorter than `no_replay_rotate`.
+`album_mins` and `artist_mins` will *separately* define the minimum interval, *in minutes*, before a specific album or artist will be played again. These should be shorter than `no_replay_rotate`.
 
-`genres_exclude_album_check` is a list of genres where the `album_mins` and `artist_mins`
-checks will be *disabled*, for example, if you have a genre with only one or two artists or
-albums in it.
+`genres_exclude_album_check` is a list of genres where the `album_mins` and `artist_mins` checks will be *disabled*, for example if you have a genre with only one or two artists or albums in it.
 
 ### Instruction files
 
-The behavior of `mpdq` is governed by simple instruction files, as many (or
-few) as you desire.  The location of the instruction file does not matter, and
-must be specified on the command line.  Without an instruction file, `mpdq` will
-just shuffle through your entire library with an equal weight to each genre.
+The behavior of `mpdq` is governed by simple instruction files, as many (or few) as you desire. The location of the instruction file does not matter and must be specified on the command line. Without an instruction file, `mpdq` will shuffle through your entire library with an equal weight to each genre.
 
-Each instruction file is a series of lines in the format `genre=weight` like so:
+Each instruction file is a series of lines in the format `genre=weight`, like this:
 
-```
+```txt
 Default=1
 Rock=3
 Classical=0
-
 ```
 
-That "weight" is the *maximum* number of times that genre will be played in
-the interval you put for `rotate_time` in the ini file. The `Default` line
-is applied to all genres that are not explicitly named in the instruction file.
+That "weight" is the *maximum* number of times that genre will be played in the interval you set for `rotate_time` in the ini file. The `Default` line is applied to all genres that are not explicitly named in the instruction file.
 
-In the example above, all genres will be played a maximum of *1* time per `rotate_time`,
-except Rock, which *may* be played *up to* three times per `rotate_time`, and Classical,
-which will *never* be played per `rotate_time`.
+In the example above, all genres will be played a maximum of *1* time per `rotate_time`, except Rock, which *may* be played *up to* three times per `rotate_time`, and Classical, which will *never* be played per `rotate_time`.
 
-Additionally, the weight will *increase* the chances of that genre being selected;
-it increases the number of chances of that genre being *selected* as well as the
-maximum number of times per `rotate_time`. Without that, the playlists are *very*
-eclectic at first, then slowly get more and more homogenous, which isn't what we
-want here.
+Additionally, the weight will *increase* the chances of that genre being selected. It increases the number of chances of that genre being *selected* as well as the maximum number of times per `rotate_time`. Without that, playlists are *very* eclectic at first, then slowly get more and more homogenous, which isn't what we want here.
 
-This allows for both very eclectic selections (as with the example above) or
-very focused selections, such as with the example below:
+This allows both very eclectic selections (as with the example above) and very focused selections, such as:
 
-```
+```txt
 Default=0
 Industrial=1
 Gothic=1
-
 ```
 
 **Capitalization Matters**
 
-`mpdq` can also create an example instruction file with *all* genres listed so
-that you can check your genre names properly.  It won't *hurt* to have all the
-genres listed, but it is totally unneeded.
+`mpdq` can also create an example instruction file with *all* genres listed so that you can check your genre names properly. It won't *hurt* to have all genres listed, but it is totally unnecessary.
 
-The instruction file should end in a newline. If it does not, `mpdq` will add
-one automatically.
+The instruction file should end in a newline. If it does not, `mpdq` will add one automatically.
 
-If the instruction "default.cfg" exists in the configuration directory, it will
-automatically be used. If that file does not exist, the default value ("1") will
-be applied to all genres.
+If the instruction `default.cfg` exists in the configuration directory, it will automatically be used. If that file does not exist, the default value (`1`) will be applied to all genres.
 
-**`mpdq` now ignores the genres `Bumper` and `Sound Clip` entirely**
+**`mpdq` now ignores the genres `Bumper` and `Sound Clip` entirely.**
 
 ## 6. Usage
 
 `mpdq [-d #][-c /path/to/file][-khe]`
 
-`mpdq` has the following command line switches:
+`mpdq` has the following command-line switches:
 
-* -c : Which instruction file to use
-* -d : Override the default priority in the instruction file
-* -k : Kill a currently running `mpdq` process.
-* -e : Create an example instruction file at $XDG_CONFIG_HOME/mpdq/example_instruction.
-* -f : Force MPD to have the right playback settings (see `Pausing the program` below).
-* -s : Choose a "station", e.g. which config file and automatically crop the queue and switch to it.
-* -h : Show a short help message.
-* --loud: Give more feedback to terminal (yes, this means the default is quiet mode)  
+- `-c`: Which instruction file to use.
+- `-d`: Override the default priority in the instruction file.
+- `-k`: Kill a currently running `mpdq` process.
+- `-e`: Create an example instruction file at `$XDG_CONFIG_HOME/mpdq/example_instruction`.
+- `-f`: Force MPD to have the right playback settings (see `Pausing the program` below).
+- `-s`: Choose a "station" (config file), automatically crop the queue, and switch to it.
+- `-h`: Show a short help message.
+- `--loud`: Give more terminal feedback (the default is quiet mode).
 
-It should be run as a single run process or using the `watch` command (e.g. `watch -n 60 mpdq`).
+It should be run as a single-run process or using the `watch` command (for example, `watch -n 60 mpdq`).
 
-With each run, `mpdq` will add `queuesize` (from the ini file) tracks to MPD queue
-and then exit.
+With each run, `mpdq` will add `queuesize` (from the ini file) tracks to the MPD queue and then exit.
+
+- If `mpdq.ini` is set up properly, you can do "random mode" by running `mpdq` by itself and setting the frequency with `-d`.
+- If you've got `default.cfg` set up as well, you can run `mpdq` with no switches.
+
+Because you define the hostname, it does *not* have to be on the same machine running MPD. If it is not on the same machine, set REMOTE=1 in the ini file so it does not doublecheck the file path.
+
+`mpdq` logs what songs it has played and will not repeat the same song during the time specified in `mpdq.ini`. It does *not* log songs played or added in any other way.
 
 ### Changing the station
 
-If you run `mpdq -s [name of configuration file]` then it will trim the queue to just the currently playing song, load that configuration,
-and follow those instructions to fill up the queue.  For example, `mpdq -s rock` will load the instructions in `$HOME/.config/mpdq/rock.cfg`.  That lets it finish playing the current song before switching.  If you leave off which example to use and have `fzf` installed, it'll let you choose interactively.
+If you run `mpdq -s [name of configuration file]`, it will trim the queue to just the currently playing song, load that configuration, and follow those instructions to fill up the queue. For example, `mpdq -s rock` will load the instructions in `$HOME/.config/mpdq/rock.cfg`. That lets it finish playing the current song before switching. If you leave off which station to use and have `fzf` installed, it'll let you choose interactively.
 
-You can put the genre-based instruction files in $XDG_CONFIG_HOME/mpdq/stations to allow you to select those as well. There is also a helper script to prune down some of the MANY genre names and eliminate instruction sets that have no valid genres in them. While they'll work as-is, they're meant to be a template to quickly adapt yourself.
+You can put genre-based instruction files in `$XDG_CONFIG_HOME/mpdq/stations` to allow selecting those as well. There is also a helper script to prune down some of the many genre names and eliminate instruction sets that have no valid genres in them. While they'll work as-is, they're meant to be templates you quickly adapt yourself.
 
-** If you have any tracks with the genre `Bumper`, it will add that before queuing more tracks** when changing stations. You can put your own "station tuning" effects if you want; there are some from Freesound in the repository. 
-
-
-
-
-* If `mpdq.ini` is set up properly, you can even just do "random mode" by running `mpdq` by itself, and setting the frequency using `-d`.
-* If you've got `default.cfg` set up as well, you can just run `mpdq` with no switches.
-
-Because you define the hostname, it does *not* have to be on the same machine
-running MPD, but because it *does* check file existence, you'll have to have
-an identical music library structure.  For example, I use a shared NFS mount.
-
-`mpdq` logs what songs it has played, and will not repeat the same song during
-the time specified in `mpdq.ini`.  It does *not* log songs played or added in
-any other way.
+**If you have any tracks with the genre `Bumper`, `mpdq` will add one before queuing more tracks when changing stations.** You can use this for your own "station tuning" effects; there are some from Freesound in the repository.
 
 ### Pausing the program
 
-Whether being run in single-run mode or the (upcoming) ongoing loop mode, `mpdq`
-will keep checking the queue and adding tracks, which isn't always what you want
-to have happen.
+Whether running in single-run mode or the (upcoming) ongoing loop mode, `mpdq` will keep checking the queue and adding tracks, which isn't always what you want.
 
 `mpdq` will *not* add *any* tracks to the queue unless:
 
-* random is **off**
-* repeat is **off**
-* consume is **on**
+- random is **off**
+- repeat is **off**
+- consume is **on**
 
-If you toggle any of those, then `mpdq` will do nothing (not even rotate the song log).
+If you toggle any of those, `mpdq` will do nothing (not even rotate the song log).
 
 ### Advanced Usage
 
-With single-run mode, `mpdq` reads from the instruction file with each run. This
-means that you can create different instruction files and either copy them to
-`default.cfg` or use the `-c` switch to change your upcoming (random-ish) music.
-
+With single-run mode, `mpdq` reads from the instruction file with each run. This means you can create different instruction files and either copy them to `default.cfg` or use the `-c` switch to change your upcoming (random-ish) music.
 
 ## 7. TODO
 
-* Add loop back in and utilize relay mechanism to change instruction file
-* Switch between loop mode and single-run mode
-* Add in what to do when all genres run through in logrotate timeperiod
-* Lighterweight way to handle log rotation, since I'm calling it frequently?
+- Add loop back in and utilize relay mechanism to change instruction file.
+- Switch between loop mode and single-run mode.
+- Add in what to do when all genres run through in logrotate time period.
+- Add a lighterweight way to handle log rotation, since it's called frequently.
