@@ -30,17 +30,14 @@ query `mpc`.  Sigh.
 
 ## 1. About
 
-`mpdq` is a auto-queing system for MPD to create a flexible and configurable
-"party mode" effect with randomization and (re)discovery of your own music.
-Inspired by the eclectic soundtracks of *Letterkenny*, *High Fidelity*,
-*Doom Patrol*, and many more.
+`mpdq` is a auto-queing system for MPD to create a flexible and configurable "party mode" effect with randomization and (re)discovery of your own music. Inspired by the eclectic soundtracks of *Letterkenny*, *High Fidelity*, *Doom Patrol*, and many more.
 (In-depth explanation at [my blog](https://ideatrash.net/?p=121759)).
 
-`mpdq` will autoqueue random tracks from your existing music library,
-with per-genre weighting and simple defaults.  
+`mpdq` will autoqueue random tracks from your existing music library, with per-genre weighting and simple defaults.  
 
-Because it uses `mpd`'s own data, new tracks and changes to your music library
-will be incorporated when `mpd` is updated.
+Because it uses `mpd`'s own data, new tracks and changes to your music library will be incorporated when `mpd` is updated.
+
+`mpdq` also now has a "radio station" toggle to let you easily switch between presets with an optional station-tuning effect.
 
 ## 2. License
 
@@ -48,19 +45,16 @@ This project is licensed under the MIT License. For the full license, see `LICEN
 
 ## 3. Prerequisites
 
-These are probably already installed or are easily available from your distro on
-linux-like distros:  
+Required (non-basic Linux packages):
 
 * [mpd](https://www.musicpd.org/)
-* [mpc](http://git.musicpd.org/cgit/master/mpc.git/)  
-* [shuf](https://linux.die.net/man/1/shuf)
-* [grep](http://en.wikipedia.org/wiki/Grep)  
-* [bash](https://www.gnu.org/software/bash/)  
-* [wc](https://www.computerhope.com/unix/uwc.htm)
-* [bc](https://www.geeksforgeeks.org/bc-command-linux-examples/)
-* [detox](http://detox.sourceforge.net/)
+* [mpc](http://git.musicpd.org/cgit/master/mpc.git/)
 
-`mpdq` will attempt to use them automatically in the order listed.
+Optional:
+
+* [fzf](https://github.com/junegunn/fzf) for interactive station selection when using `mpdq -s` without a station name.
+
+Everything else used by `mpdq` is part of a standard Linux userland (`bash`, GNU coreutils, `grep`, `sed`, `awk`, `findutils`, `procps`).
 
 ## 4. Installation
 

@@ -48,19 +48,16 @@ This project is licensed under the MIT License. For the full license, see `LICEN
 
 ## 3. Prerequisites
 
-These are probably already installed or are easily available from your distro on
-linux-like distros:  
+Required (non-basic Linux packages):
 
 * [mpd](https://www.musicpd.org/)
-* [mpc](http://git.musicpd.org/cgit/master/mpc.git/)  
-* [shuf](https://linux.die.net/man/1/shuf)
-* [grep](http://en.wikipedia.org/wiki/Grep)  
-* [bash](https://www.gnu.org/software/bash/)  
-* [wc](https://www.computerhope.com/unix/uwc.htm)
-* [bc](https://www.geeksforgeeks.org/bc-command-linux-examples/)
-* [detox](http://detox.sourceforge.net/)
+* [mpc](http://git.musicpd.org/cgit/master/mpc.git/)
 
-`mpdq` will attempt to use them automatically in the order listed.
+Optional:
+
+* [fzf](https://github.com/junegunn/fzf) for interactive station selection when using `mpdq -s` without a station name.
+
+Everything else used by `mpdq` is part of a standard Linux userland (`bash`, GNU coreutils, `grep`, `sed`, `awk`, `findutils`, `procps`).
 
 ## 4. Installation
 
