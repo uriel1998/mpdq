@@ -10,7 +10,7 @@
 ########################################################################
 # Definitions
 ########################################################################
-VERSION=2.3.0
+VERSION=2.4.0
 
 # This is an awful hack
 if [ "$UID" == "0" ];then
@@ -50,8 +50,8 @@ export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
       ConfigFile="${SCRIPT_DIR}/mpdq.ini"
   else
       ConfigFile="${ConfigDir}/mpdq.ini"
-  fi 
-  
+  fi
+
 # Defining some things. This is NOT the instruction file.
 # This file will contain time song was played, its filename, the album, and artist
 ConfigLogFile=${StateDir}/playedsongs.log

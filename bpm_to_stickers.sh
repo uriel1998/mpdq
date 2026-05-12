@@ -107,6 +107,7 @@ function check_write_bpm() {
             loud "[info] Added bpm of ${file_bpm} for ${file_path}"
         else
             loud "[warn] BPM not found for ${full_filepath}"
+            echo "${full_filepath}" >> "${SCRIPT_DIR}/no_bpm_found.txt"
         fi
     else
         loud "[info] Found BPM in stickerfile!"
@@ -116,7 +117,7 @@ function check_write_bpm() {
 
 
 read_variables
-mapfile -t FILELIST_ARRAY < <(mpc  --host "${host_arg}" --port "${MPD_PORT}" listall | shuf | head -50 )
+mapfile -t FILELIST_ARRAY < <(mpc  --host "${host_arg}" --port "${MPD_PORT}" listall | shuf )
 i=0
 while [ $i -lt ${#FILELIST_ARRAY[@]} ]; do
     file_path="${FILELIST_ARRAY[$i]}"
