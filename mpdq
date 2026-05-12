@@ -53,8 +53,6 @@ export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
   fi 
   
 # Defining some things. This is NOT the instruction file.
-# This is used to communicate with running background program, including killing and instruction file changes
-RelayName=${StateDir}/mpdq_cmd
 # This file will contain time song was played, its filename, the album, and artist
 ConfigLogFile=${StateDir}/playedsongs.log
 ConfigLogFile2=${StateDir}/playedsongs2.log
@@ -93,6 +91,7 @@ EMERGENCY_ROTATE=0
 REMOTE=0
 # initialize choosing array
 export ChooseGenre=()
+host_arg=""
 
 
 ########################################################################
@@ -128,7 +127,6 @@ function already_running {
 function show_help {
     echo "mpdq [-c /path/to/file][-khe]"
     echo "  -c [instruction file to use]"
-    echo "  -k Kill existing mpdq process "
     echo "  -e Create example instruction file "
     echo "  -h Show this help message"
     echo "  -f Force MPD to have the right playback settings"
@@ -167,8 +165,7 @@ function read_variables() {
         cat "$XDG_CONFIG_HOME/mpd/mpd.conf" | ${grep_bin} "^music" | cut -d'"' -f2 ||
         echo $HOME/Music)"
     MPD_HOST="$(echo "$config" | ${grep_bin} -e "^mpdserver=" | cut -d = -f 2- || echo localhost)"
-    MPD_PASS=$(echo "$config" | ${grep_bin} -e "^mpdpass=" | cut -d = -f 2-) &&
-    MPD_HOST="$MPD_PASS@$MPD_HOST"
+    MPD_PASS=$(echo "$config" | ${grep_bin} -e "^mpdpass=" | cut -d = -f 2-)
     MPD_PORT=$(echo "$config" | ${grep_bin} -e "^mpdport=" | cut -d = -f 2- || echo 6600)
 
     if [[ `echo "$config" | ${grep_bin} -c -e "^queuesize="` -gt 0 ]];then PLAYLIST_TRIGGER=$(echo "$config" | ${grep_bin} -e "^queuesize=" | cut -d = -f 2- );else PLAYLIST_TRIGGER="10";fi
@@ -199,6 +196,53 @@ function read_variables() {
     fi
     NUMGENRES=$(mpc --host $MPD_HOST --port $MPD_PORT list genre | wc -l)
 
+}
+
+function set_host_arg() {
+    # in case the password is already set in environment
+    if [ -n "$MPD_PASS" ] && [ "$MPD_HOST" != *"@"* ]; then
+        host_arg="$MPD_PASS@$MPD_HOST"
+    else
+        host_arg="$MPD_HOST"
+    fi
+}
+
+function load_instruction_defaults() {
+    if [ -f "${InstructionFile}" ];then
+         DefaultPriority=$(${grep_bin} -i -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
+        if [ "$DefaultPriority" == "" ];then
+            DefaultPriority=0
+        fi
+    else
+        DefaultPriority=1
+    fi
+}
+
+function load_choose_genre() {
+    ChooseGenre=()
+    loud "Loading instruction file commands"
+    # go through list of genres from mpc/mpd
+    while read -r line; do
+        # is it in our instruction file?
+        CG="${line}"
+        InInstruction=$(sed -n /^"${CG}"=/p "${InstructionFile}" "${InstructionFile}" | wc -l)
+        if [ ${InInstruction} -eq 0 ];then
+            # if not, weight=default
+            CurrWeight=${DefaultPriority}
+        else
+            # if so, weight=value from instruction file
+            # tail included to catch in case there's a duplicate instruction, takes last
+            CurrWeight=$(sed -n /^"${CG}="/p "${InstructionFile}" | tail -n 1 |cut -d = -f 2-)
+        fi
+        i=1
+        # adds genre name to the array a number of times equal to the weight, so the RNG
+        # has more of a chance to select it.
+        loud "Adding ${CurrWeight}:${CG}"
+        while [ $i -le $CurrWeight ];do
+            ChooseGenre+=("${line}")
+            ((i++))
+        done
+    done < <(mpc --host "${host_arg}" --port "${MPD_PORT}" list genre)
 }
 
 function rotate_songlog {
@@ -258,40 +302,32 @@ function killing(){
     exit
 }
 
-function read_our_relay {
-    # this is intentionally simple at this point, only the most recent thing in,
-    # then wipe it clean, if it doesn't parse, then yeet it.
-    relay_command=(tail -1 "${RelayName}")
-    rm -rf "${RelayName}"
-    case ${relay_command} in
-        kill) killing ;;
-        *)
-            if [ -f "${relay_command}" ];then
-                InstructionFile="${relay_command}"
-            fi
-            ;;
-    esac
-}
-
 function change_station {
 	newstation="${1}"
 	if [ -f "${ConfigDir}/${newstation}.cfg" ]; then
-		loud "[info] Wiping songlogs"
-		echo "" > "${ConfigLogFile}"
-		echo "" > "${ConfigLogFile2}"
-		loud "[info] Changing station to ${newstation}"
-		cp "${ConfigDir}/${newstation}.cfg" "${ConfigDir}/default.cfg"
-		mpc --host $MPD_HOST --port $MPD_PORT crop
-        # if there is anything in genre "Bumper" then choose one randomly and add it.
-        SongStem=$(mpc --host "${MPD_HOST}" --port "${MPD_PORT}" find genre "Bumper" | shuf -n1 )
-        echo "$SongStem"
-        if [ "$SongStem" != "" ];then
-			echo "HI"
-            # We will also use $SongFile as a continuing check
-            SongFile="$MPDBASE/$SongStem"
-            `mpc --host $MPD_HOST --port $MPD_PORT add "${SongStem}"`
+			loud "[info] Wiping songlogs"
+			echo "" > "${ConfigLogFile}"
+			echo "" > "${ConfigLogFile2}"
+			set_host_arg
+			loud "[info] Changing station to ${newstation}"
+			cp "${ConfigDir}/${newstation}.cfg" "${ConfigDir}/default.cfg"
+            InstructionFile="${ConfigDir}/default.cfg"
+            load_instruction_defaults
+            load_choose_genre
+			mpc --host "${host_arg}" --port "${MPD_PORT}" crop
+	        # if there is anything in genre "Bumper" then choose one randomly and add it.
+	        SongStem=$(mpc --host "${host_arg}" --port "${MPD_PORT}" find genre "Bumper" | shuf -n1 )
+	        if [ "$SongStem" != "" ];then
+	            # We will also use $SongFile as a continuing check
+	            SongFile="$MPDBASE/$SongStem"
+	            `mpc --host "${host_arg}" --port "${MPD_PORT}" add "${SongStem}"`
         fi
-        ( sleep 2; "${SCRIPT_DIR}"/mpdq ) &
+			playlist_length=$(mpc --host "$host_arg" --port "$MPD_PORT" playlist | wc -l)
+
+			while [[ $playlist_length -lt $PLAYLIST_TRIGGER ]]; do
+				need_next_song
+				playlist_length=$(mpc --host "$host_arg" --port "$MPD_PORT" playlist | wc -l)
+			done
         exit 0
 	else
 		if [ -f $(which fzf) ];then
@@ -372,14 +408,14 @@ function choose_next_song {
 
 			if [[ ${TimesPlayed} -lt ${CurrWeight} ]];then
 				# Use shuf to get us a random song from that genre
-				SongStem=$(mpc --host "${MPD_HOST}" --port "${MPD_PORT}" find genre "${GenreName}" | shuf -n1 )
+					SongStem=$(mpc --host "${host_arg}" --port "${MPD_PORT}" find genre "${GenreName}" | shuf -n1 )
 				# We will also use $SongFile as a continuing check
 				SongFile="$MPDBASE/$SongStem"
 				#check selected song length
 				length=""
 				# The funky formatting is so that if a full path is specified, it'll still match.
 
-				SongInfo=$(mpc --format "%time%§%album%§%albumartist%" --host "${MPD_HOST}" --port "${MPD_PORT}" find filename "${SongStem}")
+					SongInfo=$(mpc --format "%time%§%album%§%albumartist%" --host "${host_arg}" --port "${MPD_PORT}" find filename "${SongStem}")
 				hourcheck=$(echo "${SongInfo}" | awk -F '§' '{ print $1 }'| grep -c -e '\:'  )
 				if [ $hourcheck -eq 1 ];then
 					length=$(echo "${SongInfo}" | awk -F '§' '{print $1 }' | awk -F ':' '{print $1}')
@@ -465,9 +501,9 @@ function need_next_song {
         choose_next_song
     done
 
-    SongFileToAdd=${SongFileToAdd#$MPDBASE/}
-
-    `mpc --host $MPD_HOST --port $MPD_PORT add "$SongFileToAdd"`
+	    SongFileToAdd=${SongFileToAdd#$MPDBASE/}
+	    set_host_arg
+	    `mpc --host "${host_arg}" --port "${MPD_PORT}" add "$SongFileToAdd"`
     #reset match tests
     SongFileToAdd=""
 }
@@ -478,19 +514,18 @@ function main {
 
 
 
-    if [ -f ${RelayName} ];then
-        read_our_relay
-    fi
     # Messy, but closes all subprocesses out
     if [ ! -f /tmp/mpdq.pid ];then
         killing
     fi
 
-    playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
+	    set_host_arg
+
+    playlist_length=$(mpc --host "$host_arg" --port "$MPD_PORT" playlist | wc -l)
 
     while [[ $playlist_length -lt $PLAYLIST_TRIGGER ]]; do
         need_next_song
-        playlist_length=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT playlist | wc -l)
+        playlist_length=$(mpc --host "$host_arg" --port "$MPD_PORT" playlist | wc -l)
     done
 
 # TODO - change this into an idle loop.  Since we read the instructionfile
@@ -534,28 +569,18 @@ option="$1"
             show_help
             exit
             ;;
-        -r)
-            shift
-            echo "$1" > ${RelayName}
-            loud "${1} sent to mpdq relay file"
-            exit
-            ;;
         -f)
             mpc --host $MPD_HOST --port $MPD_PORT --quiet consume on
             mpc --host $MPD_HOST --port $MPD_PORT --quiet random off
-            ;;
-        -k)
-            already_running
-            echo "kill" > ${RelayName}
-            loud "Kill command sent to relay."
-            # TODO - sleep here, wait to see if pidfile needs reaping
             ;;
 
     esac
 done
 
 # switch off if not set -- whoops.
-test_string=$(mpc --host $MPD_PASS@$MPD_HOST --port $MPD_PORT | tail -1)
+set_host_arg
+
+test_string=$(mpc --host "$host_arg" --port "$MPD_PORT" | tail -1)
 # using xargs to strip whitespace here
 random=$(echo "${test_string}" | awk -F 'random: ' '{print $2}' | awk '{print $1}')
 repeat=$(echo "${test_string}" | awk -F 'repeat: ' '{print $2}' | awk '{print $1}')
@@ -581,36 +606,10 @@ if [ ! -f "${InstructionFile}" ];then
 fi
 
 if [ -f "${InstructionFile}" ];then
-     DefaultPriority=$(${grep_bin} -i -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
-    if [ "$DefaultPriority" == "" ];then
-        DefaultPriority=0
-    fi
-
+    load_instruction_defaults
 fi
 
-loud "Loading instruction file commands"
-# go through list of genres from mpc/mpd
-while read -r line; do
-    # is it in our instruction file?
-    CG="${line}"
-    InInstruction=$(sed -n /^"${CG}"=/p "${InstructionFile}" "${InstructionFile}" | wc -l)
-    if [ ${InInstruction} -eq 0 ];then
-        # if not, weight=default
-        CurrWeight=${DefaultPriority}
-    else
-        # if so, weight=value from instruction file
-        # tail included to catch in case there's a duplicate instruction, takes last
-        CurrWeight=$(sed -n /^"${CG}="/p "${InstructionFile}" | tail -n 1 |cut -d = -f 2-)
-    fi
-    i=1
-    # adds genre name to the array a number of times equal to the weight, so the RNG
-    # has more of a chance to select it.
-    loud "Adding ${CurrWeight}:${CG}"
-    while [ $i -le $CurrWeight ];do
-        ChooseGenre+=("${line}")
-        ((i++))
-    done
-done < <(mpc --host $MPD_HOST --port $MPD_PORT list genre)
+load_choose_genre
 
 
 main
