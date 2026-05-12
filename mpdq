@@ -20,20 +20,40 @@ if [ "$UID" == "0" ];then
     export XDG_STATE_HOME=/usr/local/state
 fi
 
+
+
+# Global variables
+export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 # Setting them here, will create if needed later
-ConfigDir=${XDG_CONFIG_HOME:-$HOME/.config}/mpdq
-StateDir=${XDG_STATE_HOME:-$HOME/.local/state}/mpdq
-CacheDir=${XDG_CACHE_HOME:-$HOME/.local/state}/mpdq
+ if [ -w "${SCRIPT_DIR}/config" ]; then
+      ConfigDir="${SCRIPT_DIR}/config"
+  elif [ -n "${XDG_STATE_HOME}" ]; then
+      ConfigDir="${XDG_CONFIG_HOME}/mpdq"
+  else
+      ConfigDir="$HOME/.config/mpdq"
+  fi
+ if [ -w "${SCRIPT_DIR}/local/state" ]; then
+      StateDir="${SCRIPT_DIR}/local/state"
+  elif [ -n "${XDG_STATE_HOME}" ]; then
+      StateDir="${XDG_STATE_HOME}/mpdq"
+  else
+      StateDir="$HOME/.local/state/mpdq"
+  fi
+ if [ -w "${SCRIPT_DIR}/cache" ]; then
+      CacheDir="${SCRIPT_DIR}/cache"
+  elif [ -n "${XDG_STATE_HOME}" ]; then
+      CacheDir="${XDG_CONFIG_HOME}/mpdq"
+  else
+      CacheDir="$HOME/.config/mpdq"
+  fi
+
+ConfigFile=${SCRIPT_DIR}/mpdq.ini:-${ConfigDir}/mpdq
 # Defining some things. This is NOT the instruction file.
-ConfigFile=${ConfigDir}/mpdq.ini
 # This is used to communicate with running background program, including killing and instruction file changes
 RelayName=${StateDir}/mpdq_cmd
 # This file will contain time song was played, its filename, the album, and artist
 ConfigLogFile=${StateDir}/playedsongs.log
 ConfigLogFile2=${StateDir}/playedsongs2.log
-
-# Global variables
-export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 grep_bin=$(which grep)
 MPDBASE=""
 MPD_HOST=""
