@@ -194,7 +194,8 @@ function read_variables() {
             fi
         fi
     fi
-    NUMGENRES=$(mpc --host $MPD_HOST --port $MPD_PORT list genre | wc -l)
+    set_host_arg
+    NUMGENRES=$(mpc --host "${host_arg}" --port "${MPD_PORT}" list genre | wc -l)
 
 }
 
@@ -284,8 +285,9 @@ function rotate_songlog {
 
 function create_example(){
     ExampleFile="$ConfigDir/default_example.cfg"
+    set_host_arg
     echo "Default=1" > "${ExampleFile}"
-    mpc --host $MPD_HOST --port $MPD_PORT list genre | sed 's/$/=1/' >> "${ExampleFile}"
+    mpc --host "${host_arg}" --port "${MPD_PORT}" list genre | sed 's/$/=1/' >> "${ExampleFile}"
     loud "Example config placed at ${ExampleFile}"
     exit
 }
@@ -558,7 +560,7 @@ option="$1"
             ;;
         -c) already_running  # should abort if already running
             shift
-            if [[ "${1}" == *"${ConfigDir}"* ]]; then
+            if [[ "${1}" == *"${ConfigDir}"* ]] || [[ -f "${1}" ]]; then
 				InstructionFile="$1"
 			else
 				change_station "${1}"
@@ -570,8 +572,9 @@ option="$1"
             exit
             ;;
         -f)
-            mpc --host $MPD_HOST --port $MPD_PORT --quiet consume on
-            mpc --host $MPD_HOST --port $MPD_PORT --quiet random off
+            set_host_arg
+            mpc --host "${host_arg}" --port "${MPD_PORT}" --quiet consume on
+            mpc --host "${host_arg}" --port "${MPD_PORT}" --quiet random off
             ;;
 
     esac
