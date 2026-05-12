@@ -1,5 +1,8 @@
 # Local reference material
 1_reference/
+.agents/
+.codex/
+config/default
 config/default.cfg
 config/default_example.cfg
 mpdq.ini
