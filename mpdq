@@ -125,12 +125,14 @@ function already_running {
 }
 
 function show_help {
-    echo "mpdq [-c /path/to/file][-khe]"
-    echo "  -c [instruction file to use]"
-    echo "  -e Create example instruction file "
-    echo "  -h Show this help message"
-    echo "  -f Force MPD to have the right playback settings"
-    echo "  --loud get more feedback on mpdq's execution"
+    echo "mpdq [-c /path/to/file|-c station_name] [-s station_name] [-e] [-f] [-h] [-l|--loud]"
+    echo "  -c FILE         explicit instruction file to use from any path"
+    echo "  -c STATION      change to a station config by name, or choose interactively"
+    echo "  -s STATION      change to a station config by name, or choose interactively"
+    echo "  -e              create example instruction file"
+    echo "  -f              force MPD to have the right playback settings"
+    echo "  -h              show this help message"
+    echo "  -l, --loud      get more feedback on mpdq's execution"
 }
 
 function init_config() {
