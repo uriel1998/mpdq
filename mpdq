@@ -27,7 +27,7 @@ export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 # Setting them here, will create if needed later
  if [ -w "${SCRIPT_DIR}/config" ]; then
       ConfigDir="${SCRIPT_DIR}/config"
-  elif [ -n "${XDG_STATE_HOME}" ]; then
+  elif [ -n "${XDG_CONFIG_HOME}" ]; then
       ConfigDir="${XDG_CONFIG_HOME}/mpdq"
   else
       ConfigDir="$HOME/.config/mpdq"
@@ -41,10 +41,10 @@ export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
   fi
  if [ -w "${SCRIPT_DIR}/cache" ]; then
       CacheDir="${SCRIPT_DIR}/cache"
-  elif [ -n "${XDG_STATE_HOME}" ]; then
-      CacheDir="${XDG_CONFIG_HOME}/mpdq"
+  elif [ -n "${XDG_CACHE_HOME}" ]; then
+      CacheDir="${XDG_CACHE_HOME}/mpdq"
   else
-      CacheDir="$HOME/.config/mpdq"
+      CacheDir="$HOME/.cache/mpdq"
   fi
   if [ -f "${SCRIPT_DIR}/mpdq.ini" ]; then
       ConfigFile="${SCRIPT_DIR}/mpdq.ini"
@@ -440,7 +440,7 @@ function choose_next_song {
 				if [ "${SongFile}" != "" ];then  # if it hasn't been rejected
 					# Genres to omit from album/artist checking (because there's only a few in that genre)
 					DontCheckAlbumOrArtistTime=$(sed -n /^genres_exclude_album_check=/p "${ConfigFile}" | cut -d = -f 2-)
-					if [[ $DontCheckAlbumOrArtistTime == *"${GenreName}" ]];then
+						if [[ $DontCheckAlbumOrArtistTime != *"${GenreName}" ]];then
 						currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
 						difftime=$(( "$ARTIST_MINS" * 60 )) #they're in minutes
 						difftime2=$(( "$ALBUM_MINS" * 60 )) #they're in minutes
