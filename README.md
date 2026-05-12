@@ -221,6 +221,10 @@ NFS mount. If that does not apply, set `remote=1`.
 or artist during the time periods specified in the config file. It does *not*
 log songs played or added in any other way.
 
+If `mpdq` exhausts all available options, it will do an emergency rotation of
+both logs and tighten the effective lookback window further each time that
+happens, resetting that emergency behavior once a valid song is selected.
+
 `mpdq` will *not* add *any* tracks to the queue unless:
 
 * random is **off**
