@@ -46,8 +46,12 @@ export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
   else
       CacheDir="$HOME/.config/mpdq"
   fi
-
-ConfigFile=${SCRIPT_DIR}/mpdq.ini:-${ConfigDir}/mpdq
+  if [ -f "${SCRIPT_DIR}/mpdq.ini" ]; then
+      ConfigFile="${SCRIPT_DIR}/mpdq.ini"
+  else
+      ConfigFile="${ConfigDir}/mpdq.ini"
+  fi 
+  
 # Defining some things. This is NOT the instruction file.
 # This is used to communicate with running background program, including killing and instruction file changes
 RelayName=${StateDir}/mpdq_cmd

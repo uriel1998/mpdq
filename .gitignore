@@ -1,6 +1,7 @@
 # Local reference material
 1_reference/
-
+config/default.cfg
+config/default_example.cfg
 mpdq.ini
 
 # Editor and OS noise
