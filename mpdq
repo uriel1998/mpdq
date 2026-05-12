@@ -254,9 +254,9 @@ function rotate_songlog {
         tempfile=$(mktemp)
         currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
         difftime=$(( "$ROTATE_TIME" * 60 * 60 ))
-        # Cuts the diff time in quarter; should handle most cases
+        # Cuts the diff time further each time we exhaust all options
         if [ ${EMERGENCY_ROTATE} -ne 0 ];then
-            difftime=$(( "$difftime" / 4 ))
+            difftime=$(( "$difftime" / ( 4 * "$EMERGENCY_ROTATE" ) ))
         fi
         hightime=$(( "$currenttime"-"$difftime" ))
         loud "Eliminating song log entries older than $ROTATE_TIME hours."
@@ -270,9 +270,9 @@ function rotate_songlog {
         tempfile=$(mktemp)
         currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
         difftime=$(( "$NOREPLAY_ROTATE_TIME" * 60 * 60 ))
-        # Cuts the diff time in quarter; should handle most cases
+        # Cuts the diff time further each time we exhaust all options
         if [ ${EMERGENCY_ROTATE} -ne 0 ];then
-            difftime=$(( "$difftime" / 4 ))
+            difftime=$(( "$difftime" / ( 4 * "$EMERGENCY_ROTATE" ) ))
         fi
         hightime=$(( "$currenttime"-"$difftime" ))
         loud "Eliminating song log entries older than $NOREPLAY_ROTATE_TIME hours."
@@ -471,25 +471,26 @@ function choose_next_song {
 				SongFile=""
 			fi
 		fi
-		if [ "${SongFile}" != "" ];then  # if it hasn't been rejected            # adding to logfile here because we have the function variables here
-            SongFileToAdd="$SongFile"
-            #mark that we used it.
-            nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+	        if [ "${SongFile}" != "" ];then  # if it hasn't been rejected            # adding to logfile here because we have the function variables here
+	            SongFileToAdd="$SongFile"
+                EMERGENCY_ROTATE=0
+	            #mark that we used it.
+	            nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
             echo "$nowtime@@@${SongFileToAdd}@${GenreName}@${artist}@#${album}" >> "$ConfigLogFile"
             echo "$nowtime@@@${SongFileToAdd}@${GenreName}@${artist}@#${album}" >> "$ConfigLogFile2"
             loud "Adding song from ${album} by ${artist} in the ${GenreName} genre."
 
             # at end to close out do-while loop
             OkayGenre="${GenreName}"
+            EMERGENCY_ROTATE=0
         else
             loud "Iteration!"
             ((counter++))
-        fi
-        if [ ${counter} -eq ${NUMGENRES} ];then
-            EMERGENCY_ROTATE=1
-            rotate_songlog
-            EMERGENCY_ROTATE=0
-        fi
+	        fi
+	        if [ ${counter} -eq ${NUMGENRES} ];then
+	            EMERGENCY_ROTATE=$(( EMERGENCY_ROTATE + 1 ))
+	            rotate_songlog
+	        fi
     done
     IFS=$OIFS
 #TODO - What happens if it maxes the counter ( -- maybe reset the logfiles?)
