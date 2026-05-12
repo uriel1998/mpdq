@@ -284,7 +284,7 @@ function rotate_songlog {
 
 function create_example(){
     ExampleFile="$ConfigDir/default_example.cfg"
-    loud "Default=1" > "${ExampleFile}"
+    echo "Default=1" > "${ExampleFile}"
     mpc --host $MPD_HOST --port $MPD_PORT list genre | sed 's/$/=1/' >> "${ExampleFile}"
     loud "Example config placed at ${ExampleFile}"
     exit
