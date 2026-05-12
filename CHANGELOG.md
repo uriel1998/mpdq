@@ -1,3 +1,133 @@
+# Changelog
+
+This file now summarizes newer history by release and keeps the older
+commit-by-commit notes for pre-`2.0` development.
+
+## 2026-05-12
+
+### Current development
+
+Based on local branch work after `2.3.0`, including commits such as
+`50cde86`, `a9d41a5`, `cd27460`, `cd188bd`, `1d661be`, `739c422`,
+`27902b1`, `bdfe45e`, `f78111a`, and `db2abaa`.
+
+* Preferred local script-directory config, state, and cache locations while
+  keeping XDG and home-directory fallbacks.
+* Fixed MPD host handling so passworded and passwordless connections now build
+  consistently through one code path, including the `-f` path and station mode.
+* Removed the broken relay-file control path and the corresponding stale
+  help/documentation references.
+* Reworked station mode so it now loads the chosen station config directly,
+  rebuilds weighted genre choices before filling the queue, and supports the
+  interactive station chooser cleanly.
+* Fixed instruction-file selection so `-c` once again accepts explicit files
+  from arbitrary paths instead of misrouting them into station mode.
+* Fixed several selection and cooldown bugs, including:
+  the malformed artist cooldown comparison,
+  inverted `genres_exclude_album_check` handling,
+  and missing `Default=1` in generated example configs.
+* Tightened the emergency no-match fallback so exhausting all options rotates
+  both logs with progressively shorter lookback windows until a valid song is
+  found, then resets the emergency state.
+* Updated the script help and README to match the current single-run and
+  station-selection behavior.
+
+## 2025-05-31
+
+### Development branch sync
+
+* Merged `master` back into `dev` after the `2.3.0` work so the branch carried
+  the current rewrite, weighting fixes, and MPD metadata changes forward.
+
+## 2.3.0 - 2024-12-13
+
+Based on commits `0879864`, `259f290`, `8a791d3`, `54ab63b`, `f4d4211`, and the
+follow-up version commit `f821361`.
+
+* Removed the `ffprobe` and `exiftool` dependency path and now pulls duration,
+  album, and artist data from MPD itself through `mpc`.
+* Simplified filename handling during selection and queue insertion.
+* Fixed a significant bug in tracking how many times a genre or track had
+  already been used.
+* Fixed default weight parsing when `Default` is missing or spelled in lowercase.
+
+## 2.2.0 - 2024-04-22
+
+Based on commits `c0c5be9`, `056f847`, `63d3977`, `56df9c3`, and `f802850`.
+
+* Added the longer no-repeat log used for "radio station" behavior so the same
+  song can be kept out of rotation for a separate, longer window.
+* Tightened instruction matching so weight lookups and play counts use the same
+  exact-match behavior.
+* Fixed duplicate instruction handling so repeated genre lines no longer break
+  weight parsing.
+
+## 2.1.1 - 2024-02-03
+
+Based on commit `35e7965`.
+
+* Documentation update for the `2.1.0` weighting rewrite.
+
+## 2.1.0 - 2024-02-03
+
+Based on commits `6d35816`, `80d8822`, `6423ab2`, `adf3cd4`, and `254f56f`.
+
+* Added weighting back into the rewritten selector by expanding genre choices
+  according to configured weight.
+* Continued stabilizing the single-run selection loop introduced in `2.0.0`.
+
+## 2.0.2 - 2024-02-03
+
+Based on commits `dc5669a` and `e6097d9`.
+
+* Fixed duration parsing so tracks with hour-length timestamps are filtered
+  correctly.
+* Added fallback handling for incomplete metadata so album cooldown tracking can
+  fall back to title when album data is missing.
+
+## 2.0.1 - 2024-02-02
+
+Based on commit `7e33391`.
+
+* Documentation-only follow-up release after `2.0.0`.
+
+## 2.0.0 - 2024-02-02
+
+Based on the `2.0.0beta` rewrite line through merge commit `32c64ab`, including
+commits such as `78627d3`, `17a2228`, `bf1fdbb`, `dbd50f5`, `fa8a24b`,
+`966fe2d`, `57913e5`, `c93e91f`, and `ab8fa70`.
+
+* Rewrote `mpdq` from the older loop-oriented model into the current single-run
+  queue filler.
+* Moved to the current XDG-style config and state layout and kept relay support
+  for command handoff.
+* Reworked config and instruction parsing to handle exact `genre=weight`
+  matching, missing instruction files, missing default values, and genre names
+  with spaces.
+* Added the current per-run selection loop that keeps queueing until MPD reaches
+  `queuesize`.
+* Added cooldown bypass support for configured genres that should skip album and
+  artist repeat checks.
+* Restored playback-state gating and added `-f` so MPD can be forced into the
+  required `consume on` / `random off` state before queueing.
+
+The longer path to this rewrite also included earlier 2022 development work:
+
+* portable lookup for `grep` on systems where it is not in the expected path
+* `--loud` / `-l` output mode for debugging and progress reporting
+* root/XDG handling for container-style runs
+* several attempts to remove subshell and FIFO issues before settling on the
+  current simpler flow
+
+## 2.0.0beta - 2024-02-02
+
+Based on commit `aa455bb` and the immediately preceding rewrite commits.
+
+* First public snapshot of the rewritten single-run branch before the final
+  `2.0.0` merge and docs pass.
+
+## Legacy Notes Through 1.5
+
 * [2022-05-21 17:25:29 CDT] - docs; note file path changes for config directories HEAD -> master, tag: 1.5
 * [2022-05-21 17:23:27 CDT] - default instruction file option gitlab/master, github/master, github/HEAD, fc/master
 * [2022-05-16 19:19:51 CDT] - selection of infotool
