@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
  ########################################################################
  #  MPDQ - The MPD Queuer
@@ -493,7 +493,6 @@ function choose_next_song {
 	        fi
     done
     IFS=$OIFS
-#TODO - What happens if it maxes the counter ( -- maybe reset the logfiles?)
 }
 
 

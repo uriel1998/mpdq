@@ -182,6 +182,8 @@ be applied to all genres.
 Station files are just instruction files kept in the config directory as
 named presets, for example `General_mix.cfg`.
 
+`-c station_name` copies that station file to `default.cfg`, nothing more.
+
 `-s station_name` changes to that station, copies it to `default.cfg`, clears
 the current song logs, optionally adds a random track from the `Bumper` genre,
 and then fills the queue.
@@ -244,5 +246,4 @@ means that you can create different instruction files and either copy them to
 
 * Add loop back in
 * Switch between loop mode and single-run mode
-* Add in what to do when all genres run through in logrotate timeperiod
 * Lighterweight way to handle log rotation, since I'm calling it frequently?

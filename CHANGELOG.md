@@ -3,6 +3,35 @@
 This file now summarizes newer history by release and keeps the older
 commit-by-commit notes for pre-`2.0` development.
 
+## 2026-05-12
+
+### Current development
+
+Based on local branch work after `2.3.0`, including commits such as
+`50cde86`, `a9d41a5`, `cd27460`, `cd188bd`, `1d661be`, `739c422`,
+`27902b1`, `bdfe45e`, `f78111a`, and `db2abaa`.
+
+* Preferred local script-directory config, state, and cache locations while
+  keeping XDG and home-directory fallbacks.
+* Fixed MPD host handling so passworded and passwordless connections now build
+  consistently through one code path, including the `-f` path and station mode.
+* Removed the broken relay-file control path and the corresponding stale
+  help/documentation references.
+* Reworked station mode so it now loads the chosen station config directly,
+  rebuilds weighted genre choices before filling the queue, and supports the
+  interactive station chooser cleanly.
+* Fixed instruction-file selection so `-c` once again accepts explicit files
+  from arbitrary paths instead of misrouting them into station mode.
+* Fixed several selection and cooldown bugs, including:
+  the malformed artist cooldown comparison,
+  inverted `genres_exclude_album_check` handling,
+  and missing `Default=1` in generated example configs.
+* Tightened the emergency no-match fallback so exhausting all options rotates
+  both logs with progressively shorter lookback windows until a valid song is
+  found, then resets the emergency state.
+* Updated the script help and README to match the current single-run and
+  station-selection behavior.
+
 ## 2025-05-31
 
 ### Development branch sync
