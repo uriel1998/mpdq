@@ -125,14 +125,15 @@ function already_running {
 }
 
 function show_help {
-    echo "mpdq [-c /path/to/file|-c station_name] [-s station_name] [-e] [-f] [-h] [-l|--loud]"
-    echo "  -c FILE         explicit instruction file to use from any path"
-    echo "  -c STATION      change to a station config by name, or choose interactively"
-    echo "  -s STATION      change to a station config by name, or choose interactively"
-    echo "  -e              create example instruction file"
-    echo "  -f              force MPD to have the right playback settings"
-    echo "  -h              show this help message"
+    echo "mpdq [-c /path/to/file|--config /path/to/file|-c station_name|--config station_name] [-s station_name|--station station_name] [-e|--enumerate] [-f|--force] [-h|--help] [-l|--loud] [-x|--example]"
+    echo "  -c, --config FILE      explicit instruction file to use from any path"
+    echo "  -c, --config STATION   change to a station config by name, or choose interactively"
+    echo "  -s, --station STATION  change to a station config by name, or choose interactively"
+    echo "  -e, --enumerate        enumerate station configs visible to mpdq"
+    echo "  -f, --force            force MPD to have the right playback settings"
+    echo "  -h, --help             show this help message"
     echo "  -l, --loud      get more feedback on mpdq's execution"
+    echo "  -x, --example          create example instruction file"
 }
 
 function init_config() {
@@ -291,6 +292,16 @@ function create_example(){
     echo "Default=1" > "${ExampleFile}"
     mpc --host "${host_arg}" --port "${MPD_PORT}" list genre | sed 's/$/=1/' >> "${ExampleFile}"
     loud "Example config placed at ${ExampleFile}"
+    exit
+}
+
+function enumerate_configs() {
+    find "${ConfigDir}" -type f -name '*.cfg' | while read -r configfile; do
+        configbase=$(basename "${configfile}")
+        if [ "${configbase}" != "default.cfg" ] && [ "${configbase}" != "default_example.cfg" ];then
+            echo "${configfile}"
+        fi
+    done
     exit
 }
 
@@ -543,6 +554,23 @@ function main {
 # Wherein we parse arguments
 ########################################################################
 init_config
+
+for option in "$@"; do
+    case $option in
+        --loud|-l)
+            export LOUD=1
+            ;;
+        --enumerate|-e)
+            enumerate_configs
+            exit
+            ;;
+        --help|-h)
+            show_help
+            exit
+            ;;
+    esac
+done
+
 read_variables
 
 
@@ -553,14 +581,17 @@ option="$1"
             export LOUD=1
             shift
             ;;
-        -e) create_example
+        --enumerate|-e) enumerate_configs
             exit
             ;;
-        -s) shift
+        --example|-x) create_example
+            exit
+            ;;
+        --station|-s) shift
 			change_station "${1}"
             exit
             ;;
-        -c) already_running  # should abort if already running
+        --config|-c) already_running  # should abort if already running
             shift
             if [[ "${1}" == *"${ConfigDir}"* ]] || [[ -f "${1}" ]]; then
 				InstructionFile="$1"
@@ -569,11 +600,11 @@ option="$1"
 			fi
             shift
             ;;
-        -h)
+        --help|-h)
             show_help
             exit
             ;;
-        -f)
+        --force|-f)
             set_host_arg
             mpc --host "${host_arg}" --port "${MPD_PORT}" --quiet consume on
             mpc --host "${host_arg}" --port "${MPD_PORT}" --quiet random off

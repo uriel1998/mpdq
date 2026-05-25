@@ -7,7 +7,7 @@ without relying on external services.
 ![mpdq logo](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq-open-graph.png "logo")
 
 ![mpdq in action](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq.gif "mpdq in action")
-
+![mpdq in action](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq2.gif "mpdq in action")
 
 ## Contents
  1. [About](#1-about)
@@ -171,7 +171,8 @@ Gothic=1
 
 `mpdq` can also create an example instruction file with *all* genres listed so
 that you can check your genre names properly. It will not *hurt* to have all the
-genres listed, but it is totally unneeded.
+genres listed, but it is totally unneeded. `-e` will enumerate the station
+configs visible to `mpdq`, and `-x` will create the example config.
 
 If the instruction `default.cfg` exists in the configuration directory, it will
 automatically be used. If that file does not exist, the default value (`1`) will
@@ -193,17 +194,18 @@ interactive chooser when the requested station is not matched directly.
 
 ## 6. Usage
 
-`mpdq [-c /path/to/file|-c station_name][-s station_name][-efhl]`
+`mpdq [-c /path/to/file|--config /path/to/file|-c station_name|--config station_name][-s station_name|--station station_name][-e|--enumerate][-f|--force][-h|--help][-l|--loud][-x|--example]`
 
 `mpdq` has the following command line switches:
 
-* `-c FILE` : Use an explicit instruction file from any path
-* `-c STATION` : Change to a station config by name, or choose interactively
-* `-s STATION` : Change to a station config by name, or choose interactively
-* `-e` : Create an example instruction file at the config directory as `default_example.cfg`
-* `-f` : Force MPD to have the right playback settings
-* `-h` : Show a short help message
+* `-c FILE`, `--config FILE` : Use an explicit instruction file from any path
+* `-c STATION`, `--config STATION` : Change to a station config by name, or choose interactively
+* `-s STATION`, `--station STATION` : Change to a station config by name, or choose interactively
+* `-e`, `--enumerate` : Enumerate the station configs visible to `mpdq`, one per line, excluding `default.cfg` and `default_example.cfg`
+* `-f`, `--force` : Force MPD to have the right playback settings
+* `-h`, `--help` : Show a short help message
 * `-l`, `--loud` : Give more feedback to terminal (yes, this means the default is quiet mode)
+* `-x`, `--example` : Create an example instruction file at the config directory as `default_example.cfg`
 
 It should be run as a single-run process or using `watch` (e.g. `watch -n 60 mpdq`).
 

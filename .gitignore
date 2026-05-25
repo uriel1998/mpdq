@@ -6,6 +6,7 @@ config/default
 config/default.cfg
 config/default_example.cfg
 mpdq.ini
+local/
 
 # Editor and OS noise
 .DS_Store
