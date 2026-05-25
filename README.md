@@ -9,6 +9,8 @@ without relying on external services.
 ![mpdq in action](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq.gif "mpdq in action")
 ![mpdq in action](https://raw.githubusercontent.com/uriel1998/mpdq/master/mpdq2.gif "mpdq in action")
 
+(The very pretty interface on the left is [rmpc, the Rusty Music Player Client.](https://rmpc.mierak.dev/))
+
 ## Contents
  1. [About](#1-about)
  2. [License](#2-license)
