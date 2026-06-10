@@ -126,7 +126,7 @@ function already_running {
 
 function show_help {
     echo "mpdq [-c /path/to/file|--config /path/to/file|-c station_name|--config station_name] [-s station_name|--station station_name] [-e|--enumerate] [-f|--force] [-h|--help] [-l|--loud] [-x|--example]"
-    echo "  -c, --config FILE      explicit instruction file to use from any path"
+    echo "  -c, --config FILE      copy an instruction file from any path to default.cfg"
     echo "  -c, --config STATION   change to a station config by name, or choose interactively"
     echo "  -s, --station STATION  change to a station config by name, or choose interactively"
     echo "  -e, --enumerate        enumerate station configs visible to mpdq"
@@ -303,6 +303,15 @@ function enumerate_configs() {
         fi
     done
     exit
+}
+
+function set_config_file {
+    newconfig="${1}"
+    if [ -f "${newconfig}" ];then
+        loud "[info] Setting default config from ${newconfig}"
+        cp "${newconfig}" "${ConfigDir}/default.cfg"
+        InstructionFile="${ConfigDir}/default.cfg"
+    fi
 }
 
 function killing(){
@@ -594,7 +603,7 @@ option="$1"
         --config|-c) already_running  # should abort if already running
             shift
             if [[ "${1}" == *"${ConfigDir}"* ]] || [[ -f "${1}" ]]; then
-				InstructionFile="$1"
+				set_config_file "${1}"
 			else
 				change_station "${1}"
 			fi

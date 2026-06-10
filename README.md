@@ -134,8 +134,9 @@ different path than the machine running `mpdq`.
 
 The behavior of `mpdq` is governed by simple instruction files, as many (or
 few) as you desire. The location of the instruction file does not matter, and
-may be specified on the command line with `-c`. Without an instruction file,
-`mpdq` will just shuffle through your entire library with an equal weight to each
+may be specified on the command line with `-c` or `--config`. When used that
+way, `mpdq` copies it to `default.cfg`. Without an instruction file, `mpdq`
+will just shuffle through your entire library with an equal weight to each
 genre.
 
 Each instruction file is a series of lines in the format `genre=weight` like so:
@@ -185,7 +186,8 @@ be applied to all genres.
 Station files are just instruction files kept in the config directory as
 named presets, for example `General_mix.cfg`.
 
-`-c station_name` copies that station file to `default.cfg`, nothing more.
+`-c station_name` or `--config station_name` copies that station file to
+`default.cfg`, nothing more.
 
 `-s station_name` changes to that station, copies it to `default.cfg`, clears
 the current song logs, optionally adds a random track from the `Bumper` genre,
@@ -200,7 +202,7 @@ interactive chooser when the requested station is not matched directly.
 
 `mpdq` has the following command line switches:
 
-* `-c FILE`, `--config FILE` : Use an explicit instruction file from any path
+* `-c FILE`, `--config FILE` : Copy an explicit instruction file from any path to `default.cfg`
 * `-c STATION`, `--config STATION` : Change to a station config by name, or choose interactively
 * `-s STATION`, `--station STATION` : Change to a station config by name, or choose interactively
 * `-e`, `--enumerate` : Enumerate the station configs visible to `mpdq`, one per line, excluding `default.cfg` and `default_example.cfg`
@@ -216,7 +218,7 @@ With each run, `mpdq` will add tracks to the MPD queue until the queue reaches
 
 * If `mpdq.ini` is set up properly, you can do "random mode" by running `mpdq` by itself.
 * If you have `default.cfg` set up as well, you can just run `mpdq` with no switches.
-* If you want to point at a one-off instruction file anywhere on disk, use `-c /full/path/to/file.cfg`.
+* If you want to set `default.cfg` from an instruction file anywhere on disk, use `-c /full/path/to/file.cfg`.
 
 Because you define the hostname, it does *not* have to be on the same machine
 running MPD. If `remote=0`, `mpdq` will still check file existence locally, so
