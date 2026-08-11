@@ -125,15 +125,29 @@ function already_running {
 }
 
 function show_help {
-    echo "mpdq [-c /path/to/file|--config /path/to/file|-c station_name|--config station_name] [-s station_name|--station station_name] [-e|--enumerate] [-f|--force] [-h|--help] [-l|--loud] [-x|--example]"
+    echo "mpdq [-c /path/to/file|--config /path/to/file|-c station_name|--config station_name] [-s station_name|--station station_name] [--album-mins MINUTES] [--artist-mins MINUTES] [-e|--enumerate] [-f|--force] [-h|--help] [-l|--loud] [--noreplay HOURS] [--rotate HOURS] [-x|--example]"
     echo "  -c, --config FILE      copy an instruction file from any path to default.cfg"
     echo "  -c, --config STATION   change to a station config by name, or choose interactively"
     echo "  -s, --station STATION  change to a station config by name, or choose interactively"
+    echo "      --album-mins MIN   override album replay delay in minutes for this run"
+    echo "      --artist-mins MIN  override artist replay delay in minutes for this run"
     echo "  -e, --enumerate        enumerate station configs visible to mpdq"
     echo "  -f, --force            force MPD to have the right playback settings"
     echo "  -h, --help             show this help message"
     echo "  -l, --loud      get more feedback on mpdq's execution"
+    echo "      --noreplay HOURS   override no-replay window in hours for this run"
+    echo "      --rotate HOURS     override genre rotation window in hours for this run"
     echo "  -x, --example          create example instruction file"
+}
+
+function missing_option_argument() {
+    echo "Missing argument for ${1}" >&2
+    exit 1
+}
+
+function unknown_option() {
+    echo "Unknown option: ${1}" >&2
+    exit 1
 }
 
 function init_config() {
@@ -597,16 +611,36 @@ option="$1"
             exit
             ;;
         --station|-s) shift
-			change_station "${1}"
+            if [ -z "${1}" ];then
+                missing_option_argument "${option}"
+            fi
+				change_station "${1}"
             exit
             ;;
         --config|-c) already_running  # should abort if already running
             shift
+            if [ -z "${1}" ];then
+                missing_option_argument "${option}"
+            fi
             if [[ "${1}" == *"${ConfigDir}"* ]] || [[ -f "${1}" ]]; then
-				set_config_file "${1}"
-			else
-				change_station "${1}"
-			fi
+					set_config_file "${1}"
+				else
+					change_station "${1}"
+				fi
+            shift
+            ;;
+        --album-mins) shift
+            if [ -z "${1}" ];then
+                missing_option_argument "${option}"
+            fi
+            ALBUM_MINS="${1}"
+            shift
+            ;;
+        --artist-mins) shift
+            if [ -z "${1}" ];then
+                missing_option_argument "${option}"
+            fi
+            ARTIST_MINS="${1}"
             shift
             ;;
         --help|-h)
@@ -617,6 +651,24 @@ option="$1"
             set_host_arg
             mpc --host "${host_arg}" --port "${MPD_PORT}" --quiet consume on
             mpc --host "${host_arg}" --port "${MPD_PORT}" --quiet random off
+            shift
+            ;;
+        --noreplay) shift
+            if [ -z "${1}" ];then
+                missing_option_argument "${option}"
+            fi
+            NOREPLAY_ROTATE_TIME="${1}"
+            shift
+            ;;
+        --rotate) shift
+            if [ -z "${1}" ];then
+                missing_option_argument "${option}"
+            fi
+            ROTATE_TIME="${1}"
+            shift
+            ;;
+        *)
+            unknown_option "${option}"
             ;;
 
     esac

@@ -198,20 +198,27 @@ interactive chooser when the requested station is not matched directly.
 
 ## 6. Usage
 
-`mpdq [-c /path/to/file|--config /path/to/file|-c station_name|--config station_name][-s station_name|--station station_name][-e|--enumerate][-f|--force][-h|--help][-l|--loud][-x|--example]`
+`mpdq [-c /path/to/file|--config /path/to/file|-c station_name|--config station_name][-s station_name|--station station_name][--album-mins MINUTES][--artist-mins MINUTES][-e|--enumerate][-f|--force][-h|--help][-l|--loud][--noreplay HOURS][--rotate HOURS][-x|--example]`
 
 `mpdq` has the following command line switches:
 
 * `-c FILE`, `--config FILE` : Copy an explicit instruction file from any path to `default.cfg`
 * `-c STATION`, `--config STATION` : Change to a station config by name, or choose interactively
 * `-s STATION`, `--station STATION` : Change to a station config by name, or choose interactively
+* `--album-mins MINUTES` : Override `album_mins` from the config file for the current run
+* `--artist-mins MINUTES` : Override `artist_mins` from the config file for the current run
 * `-e`, `--enumerate` : Enumerate the station configs visible to `mpdq`, one per line, excluding `default.cfg` and `default_example.cfg`
 * `-f`, `--force` : Force MPD to have the right playback settings
 * `-h`, `--help` : Show a short help message
 * `-l`, `--loud` : Give more feedback to terminal (yes, this means the default is quiet mode)
+* `--noreplay HOURS` : Override `no_replay_rotate` from the config file for the current run
+* `--rotate HOURS` : Override `rotate_time` from the config file for the current run
 * `-x`, `--example` : Create an example instruction file at the config directory as `default_example.cfg`
 
 It should be run as a single-run process or using `watch` (e.g. `watch -n 60 mpdq`).
+
+The `--album-mins`, `--artist-mins`, `--noreplay`, and `--rotate` switches
+change only the current run; they do not rewrite `mpdq.ini`.
 
 With each run, `mpdq` will add tracks to the MPD queue until the queue reaches
 `queuesize`, and then exit.
