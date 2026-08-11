@@ -10,7 +10,7 @@
 ########################################################################
 # Definitions
 ########################################################################
-VERSION=2.4.2
+VERSION=2.4.3
 
 # This is an awful hack
 if [ "$UID" == "0" ];then
@@ -129,7 +129,7 @@ function already_running {
 }
 
 function show_help {
-    echo "mpdq [-c /path/to/file|--config /path/to/file|-c station_name|--config station_name] [-s station_name|--station station_name] [--album-mins MINUTES] [--artist-mins MINUTES] [-e|--enumerate] [-f|--force] [-h|--help] [-l|--loud] [--noreplay HOURS] [-r|--reset] [--rotate HOURS] [-x|--example]"
+    echo "mpdq [-c /path/to/file|--config /path/to/file|-c station_name|--config station_name] [-s station_name|--station station_name] [--album-mins MINUTES] [--artist-mins MINUTES] [-e|--enumerate] [-f|--force] [-h|--help] [-l|--loud] [--noreplay HOURS] [-r|--reset] [--rotate HOURS] [-v|--version] [-x|--example]"
     echo "  -c, --config FILE      copy an instruction file from any path to default.cfg"
     echo "  -c, --config STATION   change to a station config by name, or choose interactively"
     echo "  -s, --station STATION  change to a station config by name, or choose interactively"
@@ -142,7 +142,12 @@ function show_help {
     echo "      --noreplay HOURS   override no-replay window in hours for this run"
     echo "  -r, --reset            clear played-song logs immediately"
     echo "      --rotate HOURS     override genre rotation window in hours for this run"
+    echo "  -v, --version          show version"
     echo "  -x, --example          create default_example.cfg with all genres"
+}
+
+function show_version() {
+    echo "mpdq ${VERSION}"
 }
 
 function missing_option_argument() {
@@ -847,6 +852,10 @@ for option in "$@"; do
             show_help
             exit
             ;;
+        --version|-v)
+            show_version
+            exit
+            ;;
     esac
 done
 
@@ -872,7 +881,7 @@ option="$1"
             ;;
         --station|-s) shift
             if [ -z "${1}" ];then
-                missing_option_argument "${option}"
+				change_station ""
             fi
 				change_station "${1}"
             exit
@@ -880,7 +889,8 @@ option="$1"
         --config|-c) already_running  # should abort if already running
             shift
             if [ -z "${1}" ];then
-                missing_option_argument "${option}"
+					change_station ""
+                exit
             fi
             if [[ "${1}" == *"${ConfigDir}"* ]] || [[ -f "${1}" ]]; then
 					set_config_file "${1}"
@@ -905,6 +915,10 @@ option="$1"
             ;;
         --help|-h)
             show_help
+            exit
+            ;;
+        --version|-v)
+            show_version
             exit
             ;;
         --force|-f)

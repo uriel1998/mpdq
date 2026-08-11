@@ -3,6 +3,14 @@
 This file now summarizes newer history by release and keeps the older
 commit-by-commit notes for pre-`2.0` development.
 
+## 2.4.3 - 2026-08-11
+
+Based on follow-up CLI work after `v2.4.2`.
+
+* Restored interactive chooser behavior for `-s` / `--station` and station-style
+  `-c` / `--config` when they are given without an argument.
+* Added `-v` / `--version` and documented it in the help output and READMEs.
+
 ## 2.4.2 - 2026-08-11
 
 Based on local branch work after `v2.4.1`, including selector-system and

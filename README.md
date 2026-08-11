@@ -241,7 +241,7 @@ interactive chooser when the requested station is not matched directly.
 
 ## 6. Usage
 
-`mpdq [-c /path/to/file|--config /path/to/file|-c station_name|--config station_name][-s station_name|--station station_name][--album-mins MINUTES][--artist-mins MINUTES][-e|--enumerate][-f|--force][-h|--help][-l|--loud][--noreplay HOURS][-r|--reset][--rotate HOURS][-x|--example]`
+`mpdq [-c /path/to/file|--config /path/to/file|-c station_name|--config station_name][-s station_name|--station station_name][--album-mins MINUTES][--artist-mins MINUTES][-e|--enumerate][-f|--force][-h|--help][-l|--loud][--noreplay HOURS][-r|--reset][--rotate HOURS][-v|--version][-x|--example]`
 
 `mpdq` has the following command line switches:
 
@@ -257,6 +257,7 @@ interactive chooser when the requested station is not matched directly.
 * `--noreplay HOURS` : Override `no_replay_rotate` from the config file for the current run
 * `-r`, `--reset` : Clear both played-song logs immediately
 * `--rotate HOURS` : Override `rotate_time` from the config file for the current run
+* `-v`, `--version` : Show the current `mpdq` version
 * `-x`, `--example` : Create `default_example.cfg` in the config directory with all visible genres listed
 
 It should be run as a single-run process or using `watch` (e.g. `watch -n 60 mpdq`).
