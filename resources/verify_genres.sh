@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # This script verifies the instruction files in a directory you pass and
-# only preserves those genres that exist in mpd. It also removes those 
+# only preserves selectors that exist in mpd. It also removes those
 # which are otherwise empty.
 
 
@@ -23,8 +23,9 @@ timestamp() {
   date '+%Y-%m-%d %H:%M:%S'
 }
 
-# Build a set of valid genres from MPD.
+# Build sets of valid selectors from MPD.
 declare -A valid_genres
+declare -A valid_albumartists
 mpd_host=${MPD_HOST:-}
 while IFS= read -r genre; do
   genre=${genre%$'\r'}
@@ -32,8 +33,14 @@ while IFS= read -r genre; do
   valid_genres["$genre"]=1
 done < <(mpc --host "$mpd_host" list genre)
 
-if [[ ${#valid_genres[@]} -eq 0 ]]; then
-  echo "Error: no genres returned by MPD" >&2
+while IFS= read -r albumartist; do
+  albumartist=${albumartist%$'\r'}
+  [[ -n "$albumartist" ]] || continue
+  valid_albumartists["$albumartist"]=1
+done < <(mpc --host "$mpd_host" list albumartist)
+
+if [[ ${#valid_genres[@]} -eq 0 && ${#valid_albumartists[@]} -eq 0 ]]; then
+  echo "Error: no genres or album artists returned by MPD" >&2
   exit 1
 fi
 
@@ -55,7 +62,37 @@ while IFS= read -r -d '' cfg; do
       continue
     fi
 
-    genre=${line%%=*}
+    selector=${line%%=*}
+
+    if [[ "$selector" == Default ]]; then
+      continue
+    fi
+
+    if [[ "$selector" == Genre:* ]]; then
+      genre=${selector#Genre:}
+      if [[ -n "${valid_genres[$genre]:-}" ]]; then
+        printf '%s\n' "$line" >> "$tmp_genres"
+        kept_genres=1
+      else
+        file_changed=1
+        printf '[%s] %s: removed invalid genre line: %s\n' "$(timestamp)" "$cfg" "$line" >> "$log_file"
+      fi
+      continue
+    fi
+
+    if [[ "$selector" == AlbumArtist:* ]]; then
+      albumartist=${selector#AlbumArtist:}
+      if [[ -n "${valid_albumartists[$albumartist]:-}" ]]; then
+        printf '%s\n' "$line" >> "$tmp_genres"
+        kept_genres=1
+      else
+        file_changed=1
+        printf '[%s] %s: removed invalid album artist line: %s\n' "$(timestamp)" "$cfg" "$line" >> "$log_file"
+      fi
+      continue
+    fi
+
+    genre=${selector}
 
     if [[ -n "${valid_genres[$genre]:-}" ]]; then
       printf '%s\n' "$line" >> "$tmp_genres"

@@ -3,9 +3,42 @@
 This file now summarizes newer history by release and keeps the older
 commit-by-commit notes for pre-`2.0` development.
 
+## 2.4.2 - 2026-08-11
+
+Based on local branch work after `v2.4.1`, including selector-system and
+documentation updates that had not yet been tagged.
+
+* Added mixed selector instruction support so station files can combine bare
+  genres, explicit `Genre:` selectors, `AlbumArtist:` selectors, and per-file
+  `Setting:` overrides.
+* Added type-specific default weights through `Genre:Default` and
+  `AlbumArtist:Default`, while keeping `Default` as the shared fallback.
+* Made selector matching case-insensitive for instruction lookup, selector
+  counting, album-artist resolution against MPD, and config verification.
+* Added `-e` / `--enumerate`, `-r` / `--reset`, and long-option coverage across
+  the current CLI, and clarified that `-s` and station-style `-c` can use the
+  interactive chooser.
+* Updated `-x` so it creates `default_example.cfg`, and documented
+  `example_configs/example_mixed.cfg` as the example of mixing `AlbumArtist:`
+  selectors with `Setting:` keys.
+* Fixed path handling for config, cache, and state directories so script-local
+  locations are preferred correctly before XDG fallbacks.
+* Standardized MPD host construction across normal runs, `-f`, and station
+  changes, and removed the obsolete relay-file path.
+* Fixed the malformed artist cooldown comparison, the inverted
+  `genres_exclude_album_check` logic, and the `create_example` omission that
+  could suppress the `Default=1` line.
+* Added projected queue-time accounting so already queued songs advance the
+  effective cooldown clock during a run.
+* Tightened exhausted-option handling by shrinking cooldown windows during
+  emergency rotation and by filtering the weighted pool down to selectors that
+  are still eligible before random selection.
+* Updated `resources/verify_genres.sh`, the built-in help, and both READMEs to
+  match the current selector model and example files.
+
 ## 2026-05-12
 
-### Current development
+### Current development snapshot before `2.4.2`
 
 Based on local branch work after `2.3.0`, including commits such as
 `50cde86`, `a9d41a5`, `cd27460`, `cd188bd`, `1d661be`, `739c422`,

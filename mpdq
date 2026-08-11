@@ -10,7 +10,7 @@
 ########################################################################
 # Definitions
 ########################################################################
-VERSION=2.4.0
+VERSION=2.4.2
 
 # This is an awful hack
 if [ "$UID" == "0" ];then
@@ -74,21 +74,25 @@ NOREPLAY_ROTATE_TIME=""
 # dynamically against the current logfile for thier individual time periods.
 ALBUM_MINS=""
 ARTIST_MINS=""
-# How long a song can be to be considered for the queue, in seconds
+# How long a song can be to be considered for the queue, in minutes
 SONGLENGTH=""
 # What tool to use to get song length
 MUSICINFO=""
 # Where you're getting instructions from
 InstructionFile=""
-# Default priority for GENRE weight
+# Default priorities for selector weights
 DefaultPriority=1
+GenreDefaultPriority=1
+AlbumArtistDefaultPriority=1
 NUMGENRES=""
+NUMSELECTORS=0
 # noisy feedback or not?
 LOUD=0
 # if we have exhausted all available options, shorten logrotate time temporarily
 EMERGENCY_ROTATE=0
 # If we are doing local file checks (e.g. to use on a remote machine!)
 REMOTE=0
+QUEUE_TIME_OFFSET=0
 # initialize choosing array
 export ChooseGenre=()
 host_arg=""
@@ -125,7 +129,7 @@ function already_running {
 }
 
 function show_help {
-    echo "mpdq [-c /path/to/file|--config /path/to/file|-c station_name|--config station_name] [-s station_name|--station station_name] [--album-mins MINUTES] [--artist-mins MINUTES] [-e|--enumerate] [-f|--force] [-h|--help] [-l|--loud] [--noreplay HOURS] [--rotate HOURS] [-x|--example]"
+    echo "mpdq [-c /path/to/file|--config /path/to/file|-c station_name|--config station_name] [-s station_name|--station station_name] [--album-mins MINUTES] [--artist-mins MINUTES] [-e|--enumerate] [-f|--force] [-h|--help] [-l|--loud] [--noreplay HOURS] [-r|--reset] [--rotate HOURS] [-x|--example]"
     echo "  -c, --config FILE      copy an instruction file from any path to default.cfg"
     echo "  -c, --config STATION   change to a station config by name, or choose interactively"
     echo "  -s, --station STATION  change to a station config by name, or choose interactively"
@@ -136,8 +140,9 @@ function show_help {
     echo "  -h, --help             show this help message"
     echo "  -l, --loud      get more feedback on mpdq's execution"
     echo "      --noreplay HOURS   override no-replay window in hours for this run"
+    echo "  -r, --reset            clear played-song logs immediately"
     echo "      --rotate HOURS     override genre rotation window in hours for this run"
-    echo "  -x, --example          create example instruction file"
+    echo "  -x, --example          create default_example.cfg with all genres"
 }
 
 function missing_option_argument() {
@@ -148,6 +153,13 @@ function missing_option_argument() {
 function unknown_option() {
     echo "Unknown option: ${1}" >&2
     exit 1
+}
+
+function reset_logs() {
+    : > "${ConfigLogFile}"
+    : > "${ConfigLogFile2}"
+    loud "Reset played-song logs"
+    exit
 }
 
 function init_config() {
@@ -227,40 +239,356 @@ function set_host_arg() {
 
 function load_instruction_defaults() {
     if [ -f "${InstructionFile}" ];then
-         DefaultPriority=$(${grep_bin} -i -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
+         DefaultPriority=$(${grep_bin} -i -e "^Default=" "${InstructionFile}" | cut -d = -f 2-)
         if [ "$DefaultPriority" == "" ];then
             DefaultPriority=0
         fi
+        lookup_instruction_weight "Genre:Default"
+        if [ "${LookupWeight}" == "" ];then
+            GenreDefaultPriority="${DefaultPriority}"
+        else
+            GenreDefaultPriority="${LookupWeight}"
+        fi
+        lookup_instruction_weight "AlbumArtist:Default"
+        if [ "${LookupWeight}" == "" ];then
+            AlbumArtistDefaultPriority="${DefaultPriority}"
+        else
+            AlbumArtistDefaultPriority="${LookupWeight}"
+        fi
     else
         DefaultPriority=1
+        GenreDefaultPriority=1
+        AlbumArtistDefaultPriority=1
     fi
+}
+
+function lookup_instruction_setting() {
+    setting_name="${1}"
+    SettingValue=""
+    if [ -f "${InstructionFile}" ];then
+        SettingValue=$(awk -F '=' -v target="Setting:${setting_name}" '
+            tolower($1) == tolower(target) {
+                value = substr($0, index($0, "=") + 1)
+            }
+            END {
+                print value
+            }
+        ' "${InstructionFile}")
+    fi
+}
+
+function load_instruction_settings() {
+    lookup_instruction_setting "ROTATE_TIME"
+    if [ "${SettingValue}" != "" ];then
+        ROTATE_TIME="${SettingValue}"
+    fi
+
+    lookup_instruction_setting "NOREPLAY_ROTATE_TIME"
+    if [ "${SettingValue}" != "" ];then
+        NOREPLAY_ROTATE_TIME="${SettingValue}"
+    fi
+
+    lookup_instruction_setting "ALBUM_MINS"
+    if [ "${SettingValue}" != "" ];then
+        ALBUM_MINS="${SettingValue}"
+    fi
+
+    lookup_instruction_setting "ARTIST_MINS"
+    if [ "${SettingValue}" != "" ];then
+        ARTIST_MINS="${SettingValue}"
+    fi
+}
+
+function parse_selector_key() {
+    rawkey="${1}"
+    SelectorField=""
+    SelectorValue=""
+    SelectorName=""
+    if [[ "${rawkey}" == Genre:* ]];then
+        SelectorField="Genre"
+        SelectorValue="${rawkey#Genre:}"
+        SelectorName="Genre:${SelectorValue}"
+    elif [[ "${rawkey}" == AlbumArtist:* ]];then
+        SelectorField="AlbumArtist"
+        SelectorValue="${rawkey#AlbumArtist:}"
+        SelectorName="AlbumArtist:${SelectorValue}"
+    else
+        SelectorField="Genre"
+        SelectorValue="${rawkey}"
+        SelectorName="Genre:${SelectorValue}"
+    fi
+}
+
+function lookup_instruction_weight() {
+    target1="${1}"
+    target2="${2:-}"
+    LookupWeight=""
+    if [ -f "${InstructionFile}" ];then
+        LookupWeight=$(awk -F '=' -v target1="${target1}" -v target2="${target2}" '
+            {
+                lowered_key = tolower($1)
+                lowered_target1 = tolower(target1)
+                lowered_target2 = tolower(target2)
+            }
+            (lowered_key == lowered_target1 || (target2 != "" && lowered_key == lowered_target2)) {
+                weight = substr($0, index($0, "=") + 1)
+            }
+            END {
+                print weight
+            }
+        ' "${InstructionFile}")
+    fi
+}
+
+function selector_weight_from_name() {
+    parse_selector_key "${1}"
+    if [ "${SelectorField}" == "Genre" ];then
+        lookup_instruction_weight "Genre:${SelectorValue}" "${SelectorValue}"
+        if [ "${LookupWeight}" == "" ];then
+            CurrWeight="${GenreDefaultPriority}"
+        else
+            CurrWeight="${LookupWeight}"
+        fi
+    else
+        lookup_instruction_weight "${SelectorName}"
+        if [ "${LookupWeight}" == "" ];then
+            CurrWeight="${AlbumArtistDefaultPriority}"
+        else
+            CurrWeight="${LookupWeight}"
+        fi
+    fi
+}
+
+function add_selector_to_pool() {
+    selector_to_add="${1}"
+    selector_weight="${2}"
+    i=1
+    loud "Adding ${selector_weight}:${selector_to_add}"
+    while [ $i -le $selector_weight ];do
+        ChooseGenre+=("${selector_to_add}")
+        ((i++))
+    done
+}
+
+function count_selector_plays() {
+    parse_selector_key "${1}"
+    TimesPlayed=$(awk -F '@@@' -v target="${SelectorName}" -v legacy="${SelectorValue}" -v selector_field="${SelectorField}" '
+        {
+            split($2, parts, "@")
+            selector = tolower(parts[2])
+            lowered_target = tolower(target)
+            lowered_legacy = tolower(legacy)
+            if (selector == lowered_target || (selector_field == "Genre" && selector == lowered_legacy)) {
+                count++
+            }
+        }
+        END {
+            print count + 0
+        }
+    ' "${ConfigLogFile}")
+}
+
+function selector_query_tag() {
+    if [ "${1}" == "AlbumArtist" ];then
+        echo "albumartist"
+    else
+        echo "genre"
+    fi
+}
+
+function duration_to_seconds() {
+    duration_text="${1}"
+    DurationSeconds=$(echo "${duration_text}" | awk -F ':' '
+        {
+            total = 0
+            for (i = 1; i <= NF; i++) {
+                total = (total * 60) + $i
+            }
+            print total
+        }
+    ')
+}
+
+function init_queue_time_offset() {
+    QUEUE_TIME_OFFSET=0
+    playlist_times=$(mpc --host "${host_arg}" --port "${MPD_PORT}" --format "%time%" playlist)
+    if [ "${playlist_times}" == "" ];then
+        return
+    fi
+
+    status_line=$(mpc --host "${host_arg}" --port "${MPD_PORT}" | sed -n '2p')
+    if [[ "${status_line}" == *"[playing]"* ]] || [[ "${status_line}" == *"[paused]"* ]];then
+        status_time=$(echo "${status_line}" | awk '{
+            for (i = 1; i <= NF; i++) {
+                if ($i ~ /[0-9]+:[0-9]+\/[0-9]+:[0-9]+/ || $i ~ /[0-9]+:[0-9]+:[0-9]+\/[0-9]+:[0-9]+:[0-9]+/) {
+                    print $i
+                    exit
+                }
+            }
+        }')
+        elapsed_time="${status_time%%/*}"
+        total_time="${status_time##*/}"
+        duration_to_seconds "${elapsed_time}"
+        elapsed_seconds="${DurationSeconds}"
+        duration_to_seconds "${total_time}"
+        total_seconds="${DurationSeconds}"
+        remaining_seconds=$(( total_seconds - elapsed_seconds ))
+        if [ ${remaining_seconds} -lt 0 ];then
+            remaining_seconds=0
+        fi
+        QUEUE_TIME_OFFSET=$(( QUEUE_TIME_OFFSET + remaining_seconds ))
+        playlist_times=$(echo "${playlist_times}" | sed -n '2,$p')
+    fi
+
+    while read -r queue_duration; do
+        if [ "${queue_duration}" != "" ];then
+            duration_to_seconds "${queue_duration}"
+            QUEUE_TIME_OFFSET=$(( QUEUE_TIME_OFFSET + DurationSeconds ))
+        fi
+    done <<< "${playlist_times}"
+}
+
+function resolve_selector_query_value() {
+    selector_field="${1}"
+    selector_value="${2}"
+    ResolvedSelectorValue=""
+    QueryTag=$(selector_query_tag "${selector_field}")
+    ResolvedSelectorValue=$(mpc --host "${host_arg}" --port "${MPD_PORT}" list "${QueryTag}" | awk -v target="${selector_value}" '
+        tolower($0) == tolower(target) {
+            print
+            exit
+        }
+    ')
+    if [ "${ResolvedSelectorValue}" == "" ];then
+        ResolvedSelectorValue="${selector_value}"
+    fi
+}
+
+function selector_is_eligible() {
+    selector_candidate="${1}"
+    EligibleSongFile=""
+    EligibleSongStem=""
+    EligibleAlbum=""
+    EligibleArtist=""
+    EligibleGenre=""
+    EligibleLength=0
+
+    parse_selector_key "${selector_candidate}"
+    if [ "${SelectorName}" == "" ] || { [ "${SelectorField}" == "Genre" ] && { [ "${SelectorValue}" == "Bumper" ] || [ "${SelectorValue}" == "Sound Clip" ]; }; };then
+        return 1
+    fi
+
+    count_selector_plays "${SelectorName}"
+    selector_weight_from_name "${SelectorName}"
+    if [[ ${TimesPlayed} -ge ${CurrWeight} ]];then
+        loud "Used up ${SelectorName}"
+        return 1
+    fi
+
+    resolve_selector_query_value "${SelectorField}" "${SelectorValue}"
+    QueryTag=$(selector_query_tag "${SelectorField}")
+    EligibleSongStem=$(mpc --host "${host_arg}" --port "${MPD_PORT}" find "${QueryTag}" "${ResolvedSelectorValue}" | shuf -n1 )
+    if [ "${EligibleSongStem}" == "" ];then
+        loud "No tracks found for ${SelectorName}"
+        return 1
+    fi
+
+    EligibleSongFile="$MPDBASE/$EligibleSongStem"
+    SongInfo=$(mpc --format "%time%§%album%§%albumartist%§%genre%" --host "${host_arg}" --port "${MPD_PORT}" find filename "${EligibleSongStem}")
+    SongDuration=$(echo "${SongInfo}" | awk -F '§' '{print $1 }')
+    duration_to_seconds "${SongDuration}"
+    EligibleLength="${DurationSeconds}"
+    EligibleAlbum=$(echo "${SongInfo}" | awk -F '§' '{print $2 }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+    EligibleArtist=$(echo "${SongInfo}" | awk -F '§' '{print $3 }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+    EligibleGenre=$(echo "${SongInfo}" | awk -F '§' '{print $4 }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+    if [ -z "${EligibleLength}" ];then
+        loud "No song duration found from mpc/mpd."
+        EligibleLength=0
+    fi
+    if [ ${EligibleLength} -gt $(( SONGLENGTH * 60 )) ];then
+        loud "Song too long; kicking back"
+        return 1
+    fi
+    if [ "$REMOTE" == "0" ] && [ ! -f "${EligibleSongFile}" ];then
+        return 1
+    fi
+
+    DontCheckAlbumOrArtistTime=$(sed -n /^genres_exclude_album_check=/p "${ConfigFile}" | cut -d = -f 2-)
+    if [[ "${DontCheckAlbumOrArtistTime,,}" != *"${EligibleGenre,,}"* ]];then
+        currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
+        currenttime=$(( currenttime + QUEUE_TIME_OFFSET ))
+        difftime=$(( "$ARTIST_MINS" * 60 ))
+        difftime2=$(( "$ALBUM_MINS" * 60 ))
+        if [ ${EMERGENCY_ROTATE} -ne 0 ];then
+            difftime=$(( "$difftime" / ( 4 * "$EMERGENCY_ROTATE" ) ))
+            difftime2=$(( "$difftime2" / ( 4 * "$EMERGENCY_ROTATE" ) ))
+        fi
+        hightime=$(( "$currenttime"-"$difftime" ))
+        hightime2=$(( "$currenttime"-"$difftime2" ))
+        if [[ `cat "$ConfigLogFile2" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime' | grep -i -e "@${EligibleArtist}@" | wc -l` -gt 0 ]];then echo "Artist found in log: ${EligibleArtist}"; return 1;fi
+        if [[ `cat "$ConfigLogFile2" | awk -F '@@@' -v hightime="$hightime2" '$1 > hightime' | grep -i -e "@#${EligibleAlbum}@" | wc -l` -gt 0 ]] ;then echo "Album found in log: ${EligibleAlbum}"; return 1;fi
+        if [[ `cat "$ConfigLogFile2" | grep -i -e "@#${EligibleSongFile}@" | wc -l` -gt 0 ]] ;then echo "Song found in log: ${EligibleAlbum}"; return 1;fi
+    fi
+
+    return 0
+}
+
+function build_eligible_selector_pool() {
+    EligibleSelectors=()
+    unique_selectors=$(printf '%s\n' "${ChooseGenre[@]}" | awk '!seen[$0]++')
+    while read -r selector_candidate; do
+        if [ "${selector_candidate}" == "" ];then
+            continue
+        fi
+        if selector_is_eligible "${selector_candidate}";then
+            count=0
+            while [ $count -lt ${#ChooseGenre[@]} ];do
+                if [ "${ChooseGenre[$count]}" == "${selector_candidate}" ];then
+                    EligibleSelectors+=("${selector_candidate}")
+                fi
+                count=$(( count + 1 ))
+            done
+        fi
+    done <<< "${unique_selectors}"
 }
 
 function load_choose_genre() {
     ChooseGenre=()
+    NUMGENRES=0
+    NUMSELECTORS=0
     loud "Loading instruction file commands"
     # go through list of genres from mpc/mpd
     while read -r line; do
-        # is it in our instruction file?
-        CG="${line}"
-        InInstruction=$(sed -n /^"${CG}"=/p "${InstructionFile}" "${InstructionFile}" | wc -l)
-        if [ ${InInstruction} -eq 0 ];then
-            # if not, weight=default
-            CurrWeight=${DefaultPriority}
-        else
-            # if so, weight=value from instruction file
-            # tail included to catch in case there's a duplicate instruction, takes last
-            CurrWeight=$(sed -n /^"${CG}="/p "${InstructionFile}" | tail -n 1 |cut -d = -f 2-)
-        fi
-        i=1
-        # adds genre name to the array a number of times equal to the weight, so the RNG
-        # has more of a chance to select it.
-        loud "Adding ${CurrWeight}:${CG}"
-        while [ $i -le $CurrWeight ];do
-            ChooseGenre+=("${line}")
-            ((i++))
-        done
+        parse_selector_key "${line}"
+        selector_weight_from_name "${SelectorName}"
+        NUMGENRES=$(( NUMGENRES + 1 ))
+        add_selector_to_pool "${SelectorName}" "${CurrWeight}"
     done < <(mpc --host "${host_arg}" --port "${MPD_PORT}" list genre)
+
+    if [ -f "${InstructionFile}" ];then
+        while read -r line; do
+            selector_name="${line%%=*}"
+            selector_weight="${line#*=}"
+            loud "Found instruction selector ${selector_name} with weight ${selector_weight}"
+            NUMGENRES=$(( NUMGENRES + 1 ))
+            add_selector_to_pool "${selector_name}" "${selector_weight}"
+        done < <(awk -F '=' '
+            tolower($1) ~ /^albumartist:/ {
+                entries[$1] = substr($0, index($0, "=") + 1)
+            }
+            END {
+                for (entry in entries) {
+                    print entry "=" entries[entry]
+                }
+            }
+        ' "${InstructionFile}")
+    fi
+
+    if [ ${#ChooseGenre[@]} -eq 0 ];then
+        echo "No weighted selectors available from ${InstructionFile}" >&2
+        exit 96
+    fi
+    NUMSELECTORS=${#ChooseGenre[@]}
 }
 
 function rotate_songlog {
@@ -351,6 +679,7 @@ function change_station {
 			cp "${ConfigDir}/${newstation}.cfg" "${ConfigDir}/default.cfg"
             InstructionFile="${ConfigDir}/default.cfg"
             load_instruction_defaults
+            load_instruction_settings
             load_choose_genre
 			mpc --host "${host_arg}" --port "${MPD_PORT}" crop
 	        # if there is anything in genre "Bumper" then choose one randomly and add it.
@@ -360,6 +689,7 @@ function change_station {
 	            SongFile="$MPDBASE/$SongStem"
 	            `mpc --host "${host_arg}" --port "${MPD_PORT}" add "${SongStem}"`
         fi
+            init_queue_time_offset
 			playlist_length=$(mpc --host "$host_arg" --port "$MPD_PORT" playlist | wc -l)
 
 			while [[ $playlist_length -lt $PLAYLIST_TRIGGER ]]; do
@@ -397,131 +727,52 @@ selected="$(
 function choose_next_song {
 
     SongFileToAdd=""
-    GenreNumber=""
     OkayGenre=""
 
 
 ## NEED TO CHECK FOR SPLIT AND WHITESPACE FOR GENRE NAMES
     counter=1 # this is so that if we go through ALL the genres in an hour, it'll just go ahead anyway
 
-    while [ -z "${OkayGenre}" ] && [ ${counter} -lt ${NUMGENRES} ]
+    while [ -z "${OkayGenre}" ] && [ ${counter} -le ${NUMSELECTORS} ]
     do
         OIFS=$IFS
         IFS=$'\n'
 
-        loud "Search run ${counter} of ${NUMGENRES}"
-        TimesPlayed=""
-        InInstruction=""
-        GenreName=""
-        CurrWeight=""
-        # changing this to checking our array --  bot with number and what variable it spits back
-        #get random number for genre
-        GenreNumber=$(shuf -i 1-${#ChooseGenre[@]} -n 1)
-        GenreName="${ChooseGenre[$GenreNumber]}"
-        loud "Examining ${GenreName}"
-        # Genre name is just a straight search of the logfile, as the rotation should fix this
-        # Hardcoded skip of genres Bumper and Sound Clips in song selection; those genres are for extras.
-        if [ "${GenreName}" != "" ] && [ "${GenreName}" != "Bumper" ] &&  [ "${GenreName}" != "Sound Clip" ];then
-			TimesPlayed=$(cat "${ConfigLogFile}" | sed -n /"@${GenreName}@"/p | wc -l)
-			if [ -f "${InstructionFile}" ];then
-				DefaultPriority=$(${grep_bin} -i -e "Default=" "${InstructionFile}" | cut -d = -f 2-)
-				if [ "$DefaultPriority" == "" ];then
-					DefaultPriority=0
-				fi
-				# switched to sed & wc -l due to spaces and stuff
-
-				InInstruction=$(sed -n /"${GenreName}"/p "${InstructionFile}" "${InstructionFile}" | wc -l)
-				if [ ${InInstruction} -eq 0 ];then
-					CurrWeight=${DefaultPriority}
-				else
-					CurrWeight=$(sed -n /^"${GenreName}="/p "${InstructionFile}" | cut -d = -f 2-)
-				fi
-			else
-				# this will take the default default priority of 1 for all genres if no instruction file foudn
-				CurrWeight=${DefaultPriority}
-			fi
-			loud "Default ${DefaultPriority} :: Played ${TimesPlayed} :: Weight ${CurrWeight}"
-
-			# does this need to be changed to a > ??? with quotes?
-
-			if [[ ${TimesPlayed} -lt ${CurrWeight} ]];then
-				# Use shuf to get us a random song from that genre
-					SongStem=$(mpc --host "${host_arg}" --port "${MPD_PORT}" find genre "${GenreName}" | shuf -n1 )
-				# We will also use $SongFile as a continuing check
-				SongFile="$MPDBASE/$SongStem"
-				#check selected song length
-				length=""
-				# The funky formatting is so that if a full path is specified, it'll still match.
-
-					SongInfo=$(mpc --format "%time%§%album%§%albumartist%" --host "${host_arg}" --port "${MPD_PORT}" find filename "${SongStem}")
-				hourcheck=$(echo "${SongInfo}" | awk -F '§' '{ print $1 }'| grep -c -e '\:'  )
-				if [ $hourcheck -eq 1 ];then
-					length=$(echo "${SongInfo}" | awk -F '§' '{print $1 }' | awk -F ':' '{print $1}')
-				else
-					length=$(echo "${SongInfo}" | awk -F '§' '{print $1 }' | awk -F ':' '{sum += 60*$1} {sum += $2 } END {print sum}')
-				fi
-				album=$(echo "${SongInfo}" | awk -F '§' '{print $2 }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-				artist=$(echo "${SongInfo}" | awk -F '§' '{print $3 }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-				if [ -z $length ];then
-					loud "No song duration found from mpc/mpd."
-					length="0"
-				fi
-				if [ $length -gt $SONGLENGTH ];then
-					loud "Song too long; kicking back"
-					SongFile=""
-				fi
-				if [ "$REMOTE" == "0" ]; then
-					if [ ! -f "${SongFile}" ];then  # if it hasn't been rejected
-						SongFile=""
-					fi
-				fi
-				if [ "${SongFile}" != "" ];then  # if it hasn't been rejected
-					# Genres to omit from album/artist checking (because there's only a few in that genre)
-					DontCheckAlbumOrArtistTime=$(sed -n /^genres_exclude_album_check=/p "${ConfigFile}" | cut -d = -f 2-)
-						if [[ $DontCheckAlbumOrArtistTime != *"${GenreName}" ]];then
-						currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-						difftime=$(( "$ARTIST_MINS" * 60 )) #they're in minutes
-						difftime2=$(( "$ALBUM_MINS" * 60 )) #they're in minutes
-						# No need for difftime3 - it's literally the entire file
-						hightime=$(( "$currenttime"-"$difftime" ))
-						hightime2=$(( "$currenttime"-"$difftime2" ))
-
-						# because of quoting, artists with spaces may provide extra hits using grep counting.
-						# so we're going to use wc -l to count LINES returned which should hopefully help
-
-							if [[ `cat "$ConfigLogFile2" | awk -F '@@@' -v hightime="$hightime" '$1 > hightime' | grep -e "@${artist}@" | wc -l` -gt 0 ]];then echo "Artist found in log: ${artist}"; SongFile="";fi
-						if [[ `cat "$ConfigLogFile2" | awk -F '@@@' -v hightime="$hightime2" '$1 > hightime' | grep -e "@#${album}@" | wc -l` -gt 0 ]] ;then echo "Album found in log: ${album}"; SongFile="";fi
-						if [[ `cat "$ConfigLogFile2" | grep -e "@#${SongFile}@" | wc -l` -gt 0 ]] ;then echo "Song found in log: ${album}"; SongFile="";fi
-					fi
-				fi
-			else
-				loud "Used up ${GenreName}"
-				GenreName=""
-				SongFile=""
-			fi
-		fi
-		if [ "$REMOTE" == "0" ]; then
-			if [ ! -f "${SongFile}" ];then  # if it hasn't been rejected
-				SongFile=""
-			fi
-		fi
+        loud "Search run ${counter} of ${NUMSELECTORS}"
+        build_eligible_selector_pool
+        if [ ${#EligibleSelectors[@]} -gt 0 ];then
+            GenreNumber=$(shuf -i 0-$((${#EligibleSelectors[@]} - 1)) -n 1)
+            SelectorName="${EligibleSelectors[$GenreNumber]}"
+            loud "Examining ${SelectorName}"
+            selector_is_eligible "${SelectorName}"
+            SongFile="${EligibleSongFile}"
+            SongStem="${EligibleSongStem}"
+            album="${EligibleAlbum}"
+            artist="${EligibleArtist}"
+            SongGenre="${EligibleGenre}"
+            length="${EligibleLength}"
+        else
+            SongFile=""
+        fi
 	        if [ "${SongFile}" != "" ];then  # if it hasn't been rejected            # adding to logfile here because we have the function variables here
 	            SongFileToAdd="$SongFile"
                 EMERGENCY_ROTATE=0
 	            #mark that we used it.
 	            nowtime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
-            echo "$nowtime@@@${SongFileToAdd}@${GenreName}@${artist}@#${album}" >> "$ConfigLogFile"
-            echo "$nowtime@@@${SongFileToAdd}@${GenreName}@${artist}@#${album}" >> "$ConfigLogFile2"
-            loud "Adding song from ${album} by ${artist} in the ${GenreName} genre."
+                nowtime=$(( nowtime + QUEUE_TIME_OFFSET ))
+            echo "$nowtime@@@${SongFileToAdd}@${SelectorName}@${artist}@#${album}" >> "$ConfigLogFile"
+            echo "$nowtime@@@${SongFileToAdd}@${SelectorName}@${artist}@#${album}" >> "$ConfigLogFile2"
+            loud "Adding song from ${album} by ${artist} with selector ${SelectorName}."
+            QUEUE_TIME_OFFSET=$(( QUEUE_TIME_OFFSET + length ))
 
             # at end to close out do-while loop
-            OkayGenre="${GenreName}"
+            OkayGenre="${SelectorName}"
             EMERGENCY_ROTATE=0
         else
             loud "Iteration!"
             ((counter++))
 	        fi
-	        if [ ${counter} -eq ${NUMGENRES} ];then
+	        if [ ${counter} -gt ${NUMSELECTORS} ];then
 	            EMERGENCY_ROTATE=$(( EMERGENCY_ROTATE + 1 ))
 	            rotate_songlog
 	        fi
@@ -558,6 +809,7 @@ function main {
     fi
 
 	    set_host_arg
+    init_queue_time_offset
 
     playlist_length=$(mpc --host "$host_arg" --port "$MPD_PORT" playlist | wc -l)
 
@@ -583,6 +835,10 @@ for option in "$@"; do
         --loud|-l)
             export LOUD=1
             ;;
+        --reset|-r)
+            reset_logs
+            exit
+            ;;
         --enumerate|-e)
             enumerate_configs
             exit
@@ -603,6 +859,10 @@ option="$1"
         --loud|-l)
             export LOUD=1
             shift
+            ;;
+        --reset|-r)
+            reset_logs
+            exit
             ;;
         --enumerate|-e) enumerate_configs
             exit
@@ -704,6 +964,7 @@ fi
 
 if [ -f "${InstructionFile}" ];then
     load_instruction_defaults
+    load_instruction_settings
 fi
 
 load_choose_genre

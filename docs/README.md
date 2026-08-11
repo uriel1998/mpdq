@@ -136,26 +136,46 @@ may be specified on the command line with `-c`. Without an instruction file,
 `mpdq` will just shuffle through your entire library with an equal weight to each
 genre.
 
-Each instruction file is a series of lines in the format `genre=weight` like so:
+Each instruction file is a series of lines in the format `selector=weight` like so:
 
 ```
 Default=1
 Rock=3
+Genre:Alternative=3
+AlbumArtist:Van Halen=2
 Classical=0
 
 ```
 
-That "weight" is the *maximum* number of times that genre will be played in
+Bare entries like `Rock=3` are shorthand for `Genre:Rock=3`.
+
+That "weight" is the *maximum* number of times that selector will be played in
 the interval you put for `rotate_time` in the config file. The `Default` line
 is applied to all genres that are not explicitly named in the instruction file.
+It does not create implicit `AlbumArtist:` entries.
 
 In the example above, all genres will be played a maximum of *1* time per `rotate_time`,
-except Rock, which *may* be played *up to* three times per `rotate_time`, and Classical,
-which will *never* be played per `rotate_time`.
+except Rock, which *may* be played *up to* three times per `rotate_time`,
+`Genre:Alternative`, which may be played up to three times per `rotate_time`,
+`AlbumArtist:Van Halen`, which may be played up to two times per `rotate_time`,
+and Classical, which will *never* be played per `rotate_time`.
 
-Additionally, the weight also increases the chance of that genre being selected
+Additionally, the weight also increases the chance of that selector being selected
 at all, so the configured "station" character is felt sooner instead of only
 after the log has built up.
+
+Instruction files may also optionally include setting overrides in the form:
+
+```
+Setting:ROTATE_TIME=60
+Setting:NOREPLAY_ROTATE_TIME=90
+Setting:ALBUM_MINS=20
+Setting:ARTIST_MINS=10
+```
+
+If present, those values override the corresponding base config values for that
+instruction file. `example_configs/example_mixed.cfg` shows a mixed instruction
+file using both `AlbumArtist:` selectors and `Setting:` overrides together.
 
 This allows for both very eclectic selections (as with the example above) or
 very focused selections, such as with the example below:
@@ -167,11 +187,14 @@ Gothic=1
 
 ```
 
-**Capitalization Matters**
+**Capitalization Does Not Matter**
 
 `mpdq` can also create an example instruction file with *all* genres listed so
 that you can check your genre names properly. It will not *hurt* to have all the
-genres listed, but it is totally unneeded.
+genres listed, but it is totally unneeded. The example file uses the bare
+genre shorthand form. `-e` will enumerate the station configs visible to
+`mpdq`, and `-x` will create the example default config as
+`default_example.cfg`.
 
 If the instruction `default.cfg` exists in the configuration directory, it will
 automatically be used. If that file does not exist, the default value (`1`) will
@@ -208,7 +231,7 @@ interactive chooser when the requested station is not matched directly.
 * `-l`, `--loud` : Give more feedback to terminal (yes, this means the default is quiet mode)
 * `--noreplay HOURS` : Override `no_replay_rotate` from the config file for the current run
 * `--rotate HOURS` : Override `rotate_time` from the config file for the current run
-* `-x`, `--example` : Create an example instruction file at the config directory as `default_example.cfg`
+* `-x`, `--example` : Create `default_example.cfg` in the config directory with all visible genres listed
 
 It should be run as a single-run process or using `watch` (e.g. `watch -n 60 mpdq`).
 
