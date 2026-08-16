@@ -138,18 +138,20 @@ different path than the machine running `mpdq`.
 The behavior of `mpdq` is governed by simple instruction files, as many (or
 few) as you desire. The location of the instruction file does not matter, and
 may be specified on the command line with `-c` or `--config`. When used that
-way, `mpdq` copies it to `default.cfg`. Without an instruction file, `mpdq`
-will just shuffle through your entire library with an equal weight to each
-genre.
+way with an explicit file path, `mpdq` copies it to `default.cfg`. Without an
+instruction file, `mpdq` will just shuffle through your entire library with an
+equal weight to each genre.
 
 Each instruction file is a series of lines in the format `selector=weight` like so:
 
 ```
 Default=1
 Genre:Default=1
+Album:Default=0
 AlbumArtist:Default=0
 Rock=3
 Genre:Alternative=3
+Album:1984=1
 AlbumArtist:Van Halen=2
 Classical=0
 
@@ -159,13 +161,15 @@ Bare entries like `Rock=3` are shorthand for `Genre:Rock=3`.
 
 That "weight" is the *maximum* number of times that selector will be played in
 the interval you put for `rotate_time` in the config file. `Default` is the
-fallback weight for both selector types unless a type-specific default is
-provided. `Genre:Default` overrides that fallback for genres, and
-`AlbumArtist:Default` overrides it for album artists.
+fallback weight for all selector types unless a type-specific default is
+provided. `Genre:Default` overrides that fallback for genres, `Album:Default`
+overrides it for albums, and `AlbumArtist:Default` overrides it for album
+artists.
 
 In the example above, all genres will be played a maximum of *1* time per `rotate_time`,
 except Rock, which *may* be played *up to* three times per `rotate_time`,
 `Genre:Alternative`, which may be played up to three times per `rotate_time`,
+`Album:1984`, which may be played up to one time per `rotate_time`,
 `AlbumArtist:Van Halen`, which may be played up to two times per `rotate_time`,
 and Classical, which will *never* be played per `rotate_time`.
 
@@ -184,7 +188,12 @@ Setting:ARTIST_MINS=10
 
 If present, those values override the corresponding base config values for that
 instruction file. `example_configs/example_mixed.cfg` shows a mixed instruction
-file using both `AlbumArtist:` selectors and `Setting:` overrides together.
+file using selector entries together with `Setting:` overrides.
+
+If an explicit non-default selector is given a weight of `0`, it acts as an
+exclusion even when a track is found through another selector type. Default
+weights of `0` only suppress selection for selectors that are not explicitly
+included later.
 
 This allows for both very eclectic selections (as with the example above) or
 very focused selections, such as with the examples below:
@@ -236,8 +245,9 @@ named presets, for example `General_mix.cfg`.
 the current song logs, optionally adds a random track from the `Bumper` genre,
 and then fills the queue.
 
-If `fzf` is installed, both `-s` and station-style `-c` can also open an
-interactive chooser when the requested station is not matched directly.
+If `fzf` is installed, both `-s` / `--station` and station-style `-c` /
+`--config` can also open an interactive chooser when the requested station is
+not matched directly, or when they are given without an argument.
 
 ## 6. Usage
 

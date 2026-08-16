@@ -3,6 +3,18 @@
 This file now summarizes newer history by release and keeps the older
 commit-by-commit notes for pre-`2.0` development.
 
+## 2.4.4 - 2026-08-16
+
+Based on follow-up selector work after `v2.4.3`.
+
+* Added `Album:` as a first-class selector type alongside bare genres,
+  `Genre:`, and `AlbumArtist:`.
+* Split zero-weight behavior so default `0` values suppress pool inclusion for
+  unspecified selectors, while explicit non-default `=0` entries act as
+  cross-selector vetoes for matching tracks.
+* Updated selector verification, help text, and both READMEs so the documented
+  selector model now matches the current code paths.
+
 ## 2.4.3 - 2026-08-11
 
 Based on follow-up CLI work after `v2.4.2`.

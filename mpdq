@@ -10,7 +10,7 @@
 ########################################################################
 # Definitions
 ########################################################################
-VERSION=2.4.3
+VERSION=2.4.4
 
 # This is an awful hack
 if [ "$UID" == "0" ];then
@@ -84,6 +84,7 @@ InstructionFile=""
 DefaultPriority=1
 GenreDefaultPriority=1
 AlbumArtistDefaultPriority=1
+AlbumDefaultPriority=1
 NUMGENRES=""
 NUMSELECTORS=0
 # noisy feedback or not?
@@ -260,10 +261,17 @@ function load_instruction_defaults() {
         else
             AlbumArtistDefaultPriority="${LookupWeight}"
         fi
+        lookup_instruction_weight "Album:Default"
+        if [ "${LookupWeight}" == "" ];then
+            AlbumDefaultPriority="${DefaultPriority}"
+        else
+            AlbumDefaultPriority="${LookupWeight}"
+        fi
     else
         DefaultPriority=1
         GenreDefaultPriority=1
         AlbumArtistDefaultPriority=1
+        AlbumDefaultPriority=1
     fi
 }
 
@@ -317,6 +325,10 @@ function parse_selector_key() {
         SelectorField="AlbumArtist"
         SelectorValue="${rawkey#AlbumArtist:}"
         SelectorName="AlbumArtist:${SelectorValue}"
+    elif [[ "${rawkey}" == Album:* ]];then
+        SelectorField="Album"
+        SelectorValue="${rawkey#Album:}"
+        SelectorName="Album:${SelectorValue}"
     else
         SelectorField="Genre"
         SelectorValue="${rawkey}"
@@ -354,14 +366,36 @@ function selector_weight_from_name() {
         else
             CurrWeight="${LookupWeight}"
         fi
-    else
+    elif [ "${SelectorField}" == "AlbumArtist" ];then
         lookup_instruction_weight "${SelectorName}"
         if [ "${LookupWeight}" == "" ];then
             CurrWeight="${AlbumArtistDefaultPriority}"
         else
             CurrWeight="${LookupWeight}"
         fi
+    else
+        lookup_instruction_weight "${SelectorName}"
+        if [ "${LookupWeight}" == "" ];then
+            CurrWeight="${AlbumDefaultPriority}"
+        else
+            CurrWeight="${LookupWeight}"
+        fi
     fi
+}
+
+function selector_has_explicit_zero_weight() {
+    selector_name="${1}"
+    parse_selector_key "${selector_name}"
+    if [ "${SelectorField}" == "Genre" ];then
+        lookup_instruction_weight "Genre:${SelectorValue}" "${SelectorValue}"
+    else
+        lookup_instruction_weight "${SelectorName}"
+    fi
+    if [ "${LookupWeight}" == "0" ];then
+        loud "Rejected by zero-weight selector ${selector_name}"
+        return 0
+    fi
+    return 1
 }
 
 function add_selector_to_pool() {
@@ -396,6 +430,8 @@ function count_selector_plays() {
 function selector_query_tag() {
     if [ "${1}" == "AlbumArtist" ];then
         echo "albumartist"
+    elif [ "${1}" == "Album" ];then
+        echo "album"
     else
         echo "genre"
     fi
@@ -518,6 +554,16 @@ function selector_is_eligible() {
         return 1
     fi
 
+    if [ "${EligibleGenre}" != "" ] && selector_has_explicit_zero_weight "Genre:${EligibleGenre}";then
+        return 1
+    fi
+    if [ "${EligibleArtist}" != "" ] && selector_has_explicit_zero_weight "AlbumArtist:${EligibleArtist}";then
+        return 1
+    fi
+    if [ "${EligibleAlbum}" != "" ] && selector_has_explicit_zero_weight "Album:${EligibleAlbum}";then
+        return 1
+    fi
+
     DontCheckAlbumOrArtistTime=$(sed -n /^genres_exclude_album_check=/p "${ConfigFile}" | cut -d = -f 2-)
     if [[ "${DontCheckAlbumOrArtistTime,,}" != *"${EligibleGenre,,}"* ]];then
         currenttime=$(TZ=UTC0 printf '%(%s)T\n' '-1')
@@ -578,7 +624,7 @@ function load_choose_genre() {
             NUMGENRES=$(( NUMGENRES + 1 ))
             add_selector_to_pool "${selector_name}" "${selector_weight}"
         done < <(awk -F '=' '
-            tolower($1) ~ /^albumartist:/ {
+            tolower($1) ~ /^albumartist:/ || tolower($1) ~ /^album:/ {
                 entries[$1] = substr($0, index($0, "=") + 1)
             }
             END {

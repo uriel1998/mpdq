@@ -26,6 +26,7 @@ timestamp() {
 # Build sets of valid selectors from MPD.
 declare -A valid_genres
 declare -A valid_albumartists
+declare -A valid_albums
 mpd_host=${MPD_HOST:-}
 while IFS= read -r genre; do
   genre=${genre%$'\r'}
@@ -39,8 +40,14 @@ while IFS= read -r albumartist; do
   valid_albumartists["$albumartist"]=1
 done < <(mpc --host "$mpd_host" list albumartist)
 
-if [[ ${#valid_genres[@]} -eq 0 && ${#valid_albumartists[@]} -eq 0 ]]; then
-  echo "Error: no genres or album artists returned by MPD" >&2
+while IFS= read -r album; do
+  album=${album%$'\r'}
+  [[ -n "$album" ]] || continue
+  valid_albums["$album"]=1
+done < <(mpc --host "$mpd_host" list album)
+
+if [[ ${#valid_genres[@]} -eq 0 && ${#valid_albumartists[@]} -eq 0 && ${#valid_albums[@]} -eq 0 ]]; then
+  echo "Error: no genres, album artists, or albums returned by MPD" >&2
   exit 1
 fi
 
@@ -92,6 +99,18 @@ while IFS= read -r -d '' cfg; do
       continue
     fi
 
+    if [[ "$selector" == Album:* ]]; then
+      album=${selector#Album:}
+      if [[ -n "${valid_albums[$album]:-}" ]]; then
+        printf '%s\n' "$line" >> "$tmp_genres"
+        kept_genres=1
+      else
+        file_changed=1
+        printf '[%s] %s: removed invalid album line: %s\n' "$(timestamp)" "$cfg" "$line" >> "$log_file"
+      fi
+      continue
+    fi
+
     genre=${selector}
 
     if [[ -n "${valid_genres[$genre]:-}" ]]; then
@@ -106,7 +125,7 @@ while IFS= read -r -d '' cfg; do
   if [[ $kept_genres -eq 0 ]]; then
     rm -f "$cfg"
     rm -f "$tmp_genres" "$tmp_final"
-    printf '[%s] %s: removed file (no valid genres remain)\n' "$(timestamp)" "$cfg" >> "$log_file"
+    printf '[%s] %s: removed file (no valid selectors remain)\n' "$(timestamp)" "$cfg" >> "$log_file"
     continue
   fi
 
