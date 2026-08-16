@@ -3,6 +3,14 @@
 This file now summarizes newer history by release and keeps the older
 commit-by-commit notes for pre-`2.0` development.
 
+## 2.4.5 - 2026-08-16
+
+Based on follow-up queue-selection fixes after `v2.4.4`.
+
+* Fixed a stale-candidate bug in `choose_next_song` where a selector rejected on
+  recheck could still fall through and be logged or added using leftover
+  `EligibleSong*` state from an earlier success.
+
 ## 2.4.4 - 2026-08-16
 
 Based on follow-up selector work after `v2.4.3`.

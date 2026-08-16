@@ -10,7 +10,7 @@
 ########################################################################
 # Definitions
 ########################################################################
-VERSION=2.4.4
+VERSION=2.4.5
 
 # This is an awful hack
 if [ "$UID" == "0" ];then
@@ -795,13 +795,16 @@ function choose_next_song {
             GenreNumber=$(shuf -i 0-$((${#EligibleSelectors[@]} - 1)) -n 1)
             SelectorName="${EligibleSelectors[$GenreNumber]}"
             loud "Examining ${SelectorName}"
-            selector_is_eligible "${SelectorName}"
-            SongFile="${EligibleSongFile}"
-            SongStem="${EligibleSongStem}"
-            album="${EligibleAlbum}"
-            artist="${EligibleArtist}"
-            SongGenre="${EligibleGenre}"
-            length="${EligibleLength}"
+            if selector_is_eligible "${SelectorName}";then
+                SongFile="${EligibleSongFile}"
+                SongStem="${EligibleSongStem}"
+                album="${EligibleAlbum}"
+                artist="${EligibleArtist}"
+                SongGenre="${EligibleGenre}"
+                length="${EligibleLength}"
+            else
+                SongFile=""
+            fi
         else
             SongFile=""
         fi
